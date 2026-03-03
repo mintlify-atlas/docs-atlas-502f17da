@@ -1,0 +1,124 @@
+{
+  "projectType": "sdk-library",
+  "projectName": "WebEditor",
+  "projectDescription": "A completely dynamic, JSX-based rich text editor for React powered by ProseMirror",
+  "theme": "palm",
+  "primaryColor": "#8B5CF6",
+  "lightColor": "#A78BFA",
+  "darkColor": "#7C3AED",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "installation",
+              "quickstart"
+            ]
+          },
+          {
+            "group": "Core Concepts",
+            "pages": [
+              "concepts/overview",
+              "concepts/editor-instance",
+              "concepts/markdown-jsx",
+              "concepts/theme-system"
+            ]
+          },
+          {
+            "group": "Components",
+            "pages": [
+              "components/overview",
+              "components/text-formatting",
+              "components/callouts",
+              "components/cards",
+              "components/code-snippets",
+              "components/accordions",
+              "components/tabs",
+              "components/steps",
+              "components/fields",
+              "components/columns",
+              "components/frames",
+              "components/badges",
+              "components/icons",
+              "components/mermaid"
+            ]
+          },
+          {
+            "group": "Customization",
+            "pages": [
+              "customization/custom-components",
+              "customization/styling",
+              "customization/commands-menu",
+              "customization/marks-menu"
+            ]
+          },
+          {
+            "group": "Guides",
+            "pages": [
+              "guides/controlled-editor",
+              "guides/read-only-mode",
+              "guides/keyboard-shortcuts",
+              "guides/markdown-conversion"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "Components",
+            "pages": [
+              "api/webeditor",
+              "api/theme-provider"
+            ]
+          },
+          {
+            "group": "Hooks",
+            "pages": [
+              "api/use-theme"
+            ]
+          },
+          {
+            "group": "Types",
+            "pages": [
+              "api/types"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Write Markdown and JSX seamlessly in the same document",
+    "Add custom nestable components with a commands (/) menu",
+    "Apply text marks (bold, italic, strikethrough, code, tooltips) with a marks menu",
+    "Automatic theme detection with light/dark mode support",
+    "Built on ProseMirror for robust document editing",
+    "Rich component library (callouts, code snippets, accordions, tabs, steps, cards, mermaid diagrams)",
+    "Fully customizable and extensible architecture",
+    "TypeScript support with complete type definitions"
+  ],
+  "publicApiSurface": [
+    "WebEditor - Main editor component",
+    "useTheme - Hook for theme management",
+    "Theme - Type definition for theme values",
+    "insertAccordion - Insert accordion component",
+    "insertBadge - Insert badge component",
+    "insertBreak - Insert break component",
+    "insertCallout - Insert callout component",
+    "insertCard - Insert card component",
+    "insertCodeSnippet - Insert code snippet component",
+    "insertColumns - Insert columns layout",
+    "insertField - Insert field component",
+    "insertFrame - Insert frame component",
+    "insertIcon - Insert icon component",
+    "insertMermaid - Insert mermaid diagram",
+    "insertStep - Insert step component",
+    "insertTabs - Insert tabs component"
+  ]
+}
