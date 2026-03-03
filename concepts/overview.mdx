@@ -1,0 +1,173 @@
+---
+title: Core Concepts Overview
+description: Understand the fundamental concepts behind WebEditor
+---
+
+WebEditor is a completely dynamic, JSX-based rich text editor powered by [ProseMirror](https://prosemirror.net/). It seamlessly combines Markdown syntax with custom JSX components to create a powerful editing experience.
+
+## Key Features
+
+WebEditor provides a modern editing experience with several distinctive features:
+
+<CardGroup cols={2}>
+  <Card title="Markdown & JSX Integration" icon="code">
+    Write standard Markdown syntax alongside custom JSX components in a single editor
+  </Card>
+  
+  <Card title="Custom Components" icon="puzzle-piece">
+    Add nestable components like cards, callouts, tabs, and more
+  </Card>
+  
+  <Card title="Command System" icon="terminal">
+    Access components via a searchable `/` command menu
+  </Card>
+  
+  <Card title="Automatic Theming" icon="palette">
+    Built-in light/dark mode with automatic system preference detection
+  </Card>
+</CardGroup>
+
+## Architecture
+
+WebEditor is built on three core pillars:
+
+### 1. ProseMirror Foundation
+
+At its core, WebEditor uses ProseMirror's document model to represent content. ProseMirror provides:
+
+- **Structured documents**: Content is represented as a tree of nodes, not just HTML
+- **Transactions**: All changes happen through explicit transactions
+- **Collaborative editing support**: Built-in support for operational transformation
+
+### 2. React Integration
+
+WebEditor uses `@handlewithcare/react-prosemirror` to bridge ProseMirror and React:
+
+```tsx
+import { ProseMirror, ProseMirrorDoc } from "@handlewithcare/react-prosemirror";
+
+<ProseMirror
+  state={editorState}
+  dispatchTransaction={(tr) => {
+    const newState = editorState.apply(tr);
+    setEditorState(newState);
+  }}
+  nodeViews={{
+    card: CardNodeView,
+    callout: CalloutNodeView,
+    // ... more custom components
+  }}
+>
+  <ProseMirrorDoc />
+</ProseMirror>
+```
+
+### 3. Schema System
+
+WebEditor extends the base Markdown schema with custom nodes and marks:
+
+```typescript
+// From schema.ts
+const nodes = mdSchema.spec.nodes
+  .remove("code_block")
+  .append({ card: cardNodeSpec })
+  .append({ tabs: tabsNodeSpec })
+  .append({ callout: calloutNodeSpec })
+  // ... more nodes
+
+const marks = mdSchema.spec.marks
+  .append({ strikethrough: { /* ... */ } })
+  .append({ tooltip_mark: { /* ... */ } });
+```
+
+## How It Works
+
+The editor follows this data flow:
+
+<Steps>
+  <Step title="Input Processing">
+    User types Markdown syntax or JSX-like tags (e.g., `<card title="Hello" />`)
+  </Step>
+  
+  <Step title="Input Rules">
+    ProseMirror input rules detect patterns and transform them into nodes
+  </Step>
+  
+  <Step title="Document Update">
+    The document is updated through a transaction, creating new editor state
+  </Step>
+  
+  <Step title="React Rendering">
+    Custom NodeViews render the nodes as React components
+  </Step>
+</Steps>
+
+### Example: Creating a Card
+
+When you type `<card title="Example" />`, here's what happens:
+
+1. The `addCardRule` InputRule matches the pattern:
+   ```typescript
+   new InputRule(/^<card(?:\s+([^>]+))?(?:\s*\/>|\s*>)/, (state, match, start, end) => {
+     // Parse attributes from match[1]
+     const attrs = { title: "Card Title", icon: null, showIcon: true };
+     // Create the card node
+     const card = schema.nodes.card.create(attrs, schema.nodes.paragraph.create());
+     // Replace the typed text with the card node
+     tr.replaceRangeWith(start, end, card);
+   });
+   ```
+
+2. The card node is rendered by `CardNodeView` as a React component
+
+3. The component provides interactive editing (click to edit title, change icon, etc.)
+
+## Document Serialization
+
+WebEditor can convert between three formats:
+
+### Markdown/MDX → HTML → ProseMirror
+
+```typescript
+function mdxLikeToProseMirror(markdown: string) {
+  // 1. Remove frontmatter and convert Markdown to HTML
+  const html = preprocessMarkdownToHTML(markdown);
+  
+  // 2. Parse HTML into ProseMirror document
+  return htmlToProseMirror(html);
+}
+```
+
+### ProseMirror → HTML
+
+```typescript
+function proseMirrorToHTML(doc: Node) {
+  const serializer = DOMSerializer.fromSchema(schema);
+  const domNode = serializer.serializeFragment(doc.content);
+  return container.innerHTML;
+}
+```
+
+<Note>
+The editor uses HTML as an intermediate format because the `marked` library converts Markdown to HTML, which is then parsed into ProseMirror's document model.
+</Note>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Editor Instance" href="/concepts/editor-instance">
+    Learn how to use the WebEditor component
+  </Card>
+  
+  <Card title="Markdown & JSX" href="/concepts/markdown-jsx">
+    Understand how Markdown and JSX work together
+  </Card>
+  
+  <Card title="Theme System" href="/concepts/theme-system">
+    Explore automatic theme detection
+  </Card>
+  
+  <Card title="Custom Components" href="/components/overview">
+    Browse available components
+  </Card>
+</CardGroup>

@@ -1,0 +1,418 @@
+---
+title: Markdown and JSX Integration
+description: How WebEditor combines Markdown syntax with JSX components
+---
+
+WebEditor allows you to seamlessly mix standard Markdown syntax with JSX-like component tags, giving you the best of both worlds.
+
+## Markdown Support
+
+WebEditor supports all common Markdown syntax through ProseMirror input rules.
+
+### Headings
+
+Type `#` followed by a space to create headings:
+
+```markdown
+# Heading 1
+## Heading 2
+### Heading 3
+#### Heading 4
+```
+
+<Info>
+WebEditor supports headings levels 1-4. The pattern is defined in `addHeadersRule`.
+</Info>
+
+Implementation:
+```typescript
+export const addHeadersRule = textblockTypeInputRule(
+  /^(#{1,4})\s$/,
+  schema.nodes.heading,
+  (match) => ({ level: match[1].length })
+);
+```
+
+### Text Formatting
+
+Apply inline formatting using standard Markdown:
+
+| Syntax | Result | Input Rule |
+|--------|--------|------------|
+| `**bold**` | **bold** | `addStrongRule` |
+| `_italic_` | _italic_ | `addEmRule` |
+| `~~strikethrough~~` | ~~strikethrough~~ | `addStrikethroughRule` |
+
+<Accordion title="How text formatting works">
+When you complete a pattern like `**text**`, the input rule:
+
+1. Matches the pattern
+2. Extracts the text content
+3. Replaces the entire match with marked text
+4. Removes the stored mark to prevent continuation
+
+```typescript
+export const addStrongRule = new InputRule(
+  /\*\*([^*]+)\*\*/,
+  (state, match, start, end) => {
+    const tr = state.tr;
+    const textContent = match[1];
+    
+    // Replace with marked text
+    tr.replaceWith(
+      start,
+      end,
+      state.schema.text(textContent, [state.schema.marks.strong.create()])
+    );
+    
+    // Don't continue with the mark
+    tr.removeStoredMark(schema.marks.strong);
+    return tr;
+  }
+);
+```
+</Accordion>
+
+### Lists
+
+Create lists by typing special characters:
+
+**Unordered lists:**
+```markdown
+- Item 1
+- Item 2
+  - Nested item (press Tab)
+```
+
+**Ordered lists:**
+```markdown
+1. First item
+2. Second item
+3. Third item
+```
+
+<Info>
+Press **Enter** in an empty list item to exit the list. Press **Tab** to indent (nest) a list item.
+</Info>
+
+Implementation:
+```typescript
+export const addUnorderedListRule = wrappingInputRule(
+  /^\s*[-*+]\s$/,
+  schema.nodes.bullet_list
+);
+
+export const addOrderedListRule = wrappingInputRule(
+  /^\s*\d+\.\s$/,
+  schema.nodes.ordered_list
+);
+```
+
+### Blockquotes
+
+Type `>` followed by a space:
+
+```markdown
+> This is a blockquote
+> It can span multiple lines
+```
+
+Implementation:
+```typescript
+export const addQuoteRule = wrappingInputRule(
+  /^\s*>\s/,
+  schema.nodes.blockquote
+);
+```
+
+## JSX Component Syntax
+
+WebEditor extends Markdown with JSX-like tags for custom components. These tags are transformed into ProseMirror nodes through input rules.
+
+### Basic Component Syntax
+
+Components can be written as self-closing or with content:
+
+```jsx
+// Self-closing (leaf nodes)
+<Badge text="New" />
+<Icon icon="Sparkles" />
+<Break />
+
+// With content (block nodes)
+<Card title="Hello">
+  Content goes here
+</Card>
+
+<Callout type="warning">
+  This is important!
+</Callout>
+```
+
+### Attributes
+
+Pass attributes using the standard JSX syntax:
+
+```jsx
+<Card 
+  title="My Card" 
+  icon="FileText" 
+  showIcon={true}
+  horizontal={false}
+/>
+```
+
+<Warning>
+Attribute values must be quoted strings or boolean flags. Complex expressions are not supported.
+</Warning>
+
+### How JSX Parsing Works
+
+Each component has an input rule that matches its tag pattern:
+
+```typescript
+// From card.tsx
+export const addCardRule = new InputRule(
+  /^<card(?:\s+([^>]+))?(?:\s*\/>|\s*>)/,
+  (state, match, start, end) => {
+    const { tr, schema } = state;
+    
+    // Default attributes
+    const attrs = {
+      title: "Card Title",
+      icon: null,
+      showIcon: true,
+      horizontal: false,
+      href: null,
+    };
+    
+    // Parse attributes from match[1]
+    if (match[1]) {
+      const attrString = match[1];
+      
+      // Parse title="..." attribute
+      const titleMatch = attrString.match(/title="([^"]*)"/); 
+      if (titleMatch) attrs.title = titleMatch[1];
+      
+      // Parse icon="..." attribute
+      const iconMatch = attrString.match(/icon="([^"]*)"/); 
+      if (iconMatch) attrs.icon = iconMatch[1];
+      
+      // Parse boolean attributes
+      attrs.horizontal = /horizontal(?:=true|\s|$)/.test(attrString);
+      attrs.showIcon = !/showIcon=false/.test(attrString);
+    }
+    
+    // Create the node
+    const card = schema.nodes.card.create(
+      attrs,
+      schema.nodes.paragraph.create()
+    );
+    
+    // Replace the text with the node
+    tr.replaceRangeWith(start, end, card);
+    
+    // Position cursor inside
+    const newPos = start + 1;
+    tr.setSelection(Selection.near(tr.doc.resolve(newPos)));
+    
+    return tr;
+  }
+);
+```
+
+## Mixing Markdown and JSX
+
+You can seamlessly combine Markdown and JSX:
+
+```
+# Documentation
+
+Here's a **regular paragraph** with _formatting_.
+
+[Callout type="info"]
+  This callout contains **Markdown formatting** and a list:
+  
+  - Item 1
+  - Item 2
+[/Callout]
+
+[Card title="Code Example" icon="Code"]
+  You can even use code blocks within components!
+[/Card]
+```
+
+The editor preserves Markdown formatting inside JSX components while rendering them with the component's styling.
+
+## Command Menu Alternative
+
+Instead of typing JSX tags, you can use the command menu:
+
+<Steps>
+  <Step title="Open the menu">
+    Press `/` in an empty paragraph
+  </Step>
+  
+  <Step title="Search for a component">
+    Type to filter (e.g., "card", "callout")
+  </Step>
+  
+  <Step title="Select and insert">
+    Use arrow keys and press Enter, or click to insert
+  </Step>
+</Steps>
+
+The command menu calls insert functions directly:
+
+```typescript
+// From index.tsx
+const insertFunctions = {
+  accordion: insertAccordion,
+  badge: insertBadge,
+  break: insertBreak,
+  callout: insertCallout,
+  card: insertCard,
+  // ...
+};
+
+async function handleCommandWrapper(command: Command) {
+  const view = editorViewRef.current;
+  if (!view) return;
+  
+  if (isComponentCommand(command) && command.componentName in insertFunctions) {
+    const insertFunction = insertFunctions[command.componentName];
+    const tr = insertFunction(state);
+    dispatch(tr);
+    view.focus();
+  }
+}
+```
+
+Example insert function:
+```typescript
+// From card.tsx
+export function insertCard(state: EditorState): Transaction {
+  const { from, to } = state.selection;
+  
+  const attrs = {
+    title: "Card Title",
+    icon: null,
+    showIcon: true,
+    horizontal: false,
+    href: null,
+  };
+  
+  const card = state.schema.nodes.card.create(
+    attrs,
+    state.schema.nodes.paragraph.create()
+  );
+  
+  let tr = state.tr;
+  if (from !== to) {
+    tr = tr.delete(from, to);
+  }
+  tr = tr.replaceSelectionWith(card);
+  
+  // Position cursor inside the card
+  const insertPos = tr.selection.from;
+  const innerPos = insertPos + 1;
+  tr = tr.setSelection(Selection.near(tr.doc.resolve(innerPos)));
+  
+  return tr;
+}
+```
+
+## Preprocessing Pipeline
+
+When loading content, WebEditor processes it through several stages:
+
+<Steps>
+  <Step title="Remove Frontmatter">
+    YAML frontmatter between `---` markers is stripped
+  </Step>
+  
+  <Step title="Markdown to HTML">
+    The `marked` library converts Markdown syntax to HTML
+  </Step>
+  
+  <Step title="HTML to ProseMirror">
+    ProseMirror's DOMParser converts HTML to the document model
+  </Step>
+</Steps>
+
+Implementation:
+```typescript
+// From preprocessMarkdown.ts
+export function preprocessMarkdownToHTML(markdown: string): string {
+  markdown = markdown.trim();
+  
+  // Remove frontmatter
+  markdown = markdown.replace(/^---[\s\S]*?---\n?/m, "");
+  
+  return marked.parse(markdown, { renderer }) as string;
+}
+
+// From index.tsx
+function mdxLikeToProseMirror(markdown: string) {
+  const html = preprocessMarkdownToHTML(markdown);
+  return htmlToProseMirror(html);
+}
+
+function htmlToProseMirror(html: string) {
+  const tempDiv = document.createElement("div");
+  tempDiv.innerHTML = html;
+  
+  const parser = DOMParser.fromSchema(schema);
+  const fragment = parser.parseSlice(tempDiv).content;
+  
+  return fragment;
+}
+```
+
+## Code Blocks
+
+WebEditor has special handling for code blocks with language and title metadata:
+
+```markdown
+```javascript#my-file.js
+console.log("Hello");
+```
+```
+
+The renderer extracts language and title:
+```typescript
+const renderer = new marked.Renderer();
+
+renderer.code = (code: string, lang?: string) => {
+  if (lang?.includes("#")) {
+    const [language, title] = lang.split("#");
+    return `<pre><code title="${escapeHtml(title)}" language="${escapeHtml(language)}">${code}</code></pre>`;
+  }
+  
+  if (lang) {
+    return `<pre><code language="${escapeHtml(lang)}">${code}</code></pre>`;
+  }
+  
+  return `<pre><code>${code}</code></pre>`;
+};
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Available Components" href="/components/overview">
+    See all components you can use
+  </Card>
+  
+  <Card title="Custom Components" href="/customization/custom-components">
+    Learn to create custom components
+  </Card>
+  
+  <Card title="Commands Menu" href="/customization/commands-menu">
+    Customize the commands menu
+  </Card>
+  
+  <Card title="Editor Instance" href="/concepts/editor-instance">
+    Back to editor configuration
+  </Card>
+</CardGroup>

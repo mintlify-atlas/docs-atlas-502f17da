@@ -1,0 +1,186 @@
+---
+title: WebEditor
+description: Complete API reference for the WebEditor component
+---
+
+## WebEditor
+
+The main editor component that provides a rich text editing experience with Markdown support and custom components.
+
+### Import
+
+```tsx
+import { WebEditor } from '@devscribe-team/webeditor';
+import '@devscribe-team/webeditor/styles';
+```
+
+### Props
+
+<ParamField path="value" type="string" optional>
+  The initial Markdown/MDX content to display in the editor. When this prop changes, the editor state will be re-initialized with the new content.
+  
+  If not provided or `undefined`, the editor will start with an empty state.
+</ParamField>
+
+<ParamField path="editable" type="boolean" default="true" optional>
+  Controls whether the editor content can be modified by the user.
+  
+  - `true`: Editor is fully interactive and editable
+  - `false`: Editor is read-only, displays content without editing capabilities
+</ParamField>
+
+<ParamField path="onChange" type="(doc: string) => void" optional>
+  Callback function invoked whenever the editor content changes.
+  
+  **Parameters:**
+  - `doc`: The updated content as an HTML string representing the current editor state
+  
+  **Note:** This callback is triggered on every transaction (keystroke, paste, etc.). For production use, consider debouncing this callback to avoid excessive updates.
+</ParamField>
+
+### Usage
+
+#### Basic Editor
+
+```tsx
+import { WebEditor } from '@devscribe-team/webeditor';
+import '@devscribe-team/webeditor/styles';
+import { useState } from 'react';
+
+export default function App() {
+  const [content, setContent] = useState('# Hello World\n\nStart writing...');
+
+  return (
+    <WebEditor 
+      value={content}
+      onChange={(doc) => setContent(doc)}
+    />
+  );
+}
+```
+
+#### Read-Only Mode
+
+```tsx
+import { WebEditor } from '@devscribe-team/webeditor';
+import '@devscribe-team/webeditor/styles';
+
+const documentation = `
+# API Documentation
+
+This is read-only documentation content.
+`;
+
+export default function Docs() {
+  return <WebEditor value={documentation} editable={false} />;
+}
+```
+
+#### With Debounced Updates
+
+```tsx
+import { WebEditor } from '@devscribe-team/webeditor';
+import '@devscribe-team/webeditor/styles';
+import { useState, useCallback } from 'react';
+import { debounce } from 'lodash';
+
+export default function DebouncedEditor() {
+  const [content, setContent] = useState('');
+
+  // Debounce save operations to avoid excessive API calls
+  const debouncedSave = useCallback(
+    debounce((doc: string) => {
+      // Save to backend, localStorage, etc.
+      console.log('Saving:', doc);
+    }, 1000),
+    []
+  );
+
+  const handleChange = (doc: string) => {
+    setContent(doc);
+    debouncedSave(doc);
+  };
+
+  return (
+    <WebEditor 
+      value={content}
+      onChange={handleChange}
+    />
+  );
+}
+```
+
+### Features
+
+#### Built-in Components
+
+The editor comes with support for the following custom components:
+
+- **Accordion**: Collapsible content sections
+- **Badge**: Inline status or category indicators
+- **Break**: Visual section separators
+- **Callout**: Highlighted information blocks
+- **Card**: Container component for grouping content
+- **Code Snippet**: Syntax-highlighted code blocks with CodeMirror
+- **Columns**: Multi-column layouts
+- **Field**: Input field components
+- **Frame**: Embedded content containers
+- **Icon**: Inline icon support from Lucide
+- **Mermaid**: Diagram rendering with Mermaid.js
+- **Steps**: Sequential step-by-step content
+- **Tabs**: Tabbed content organization
+
+#### Keyboard Shortcuts
+
+- `/` - Open component and marks menu (when at the start of an empty line or with text selected)
+- `Mod-z` - Undo
+- `Mod-r` - Redo
+- Standard text formatting shortcuts work as expected
+
+#### Theming
+
+The editor automatically detects and applies dark/light themes based on browser preferences. Use the `useTheme` hook to customize theme behavior (see [useTheme documentation](/api/use-theme)).
+
+### Implementation Details
+
+#### Architecture
+
+WebEditor is built on top of:
+- **ProseMirror**: Robust document editing framework
+- **CodeMirror**: Code editing for code snippets
+- **Marked**: Markdown parsing
+- **Mermaid**: Diagram rendering
+
+#### Content Format
+
+- **Input**: Accepts Markdown/MDX-like syntax via the `value` prop
+- **Output**: Returns HTML via the `onChange` callback
+- **Internal**: Uses ProseMirror's document model for editing
+
+#### State Management
+
+The editor re-initializes its internal state whenever the `value` prop changes. This means:
+- Changing `value` will reset the editor to the new content
+- Undo/redo history is reset when `value` changes
+- For controlled editing, manage state updates carefully to avoid disrupting the user's editing flow
+
+### Styling
+
+The editor uses Tailwind CSS for styling. Make sure to:
+
+1. Import the styles in your application:
+   ```tsx
+   import '@devscribe-team/webeditor/styles';
+   ```
+
+2. Configure Tailwind CSS v4+ in your project
+
+3. The editor applies theme classes to `document.documentElement` (`.dark` or `.light`)
+
+### Browser Support
+
+WebEditor requires a modern browser environment with:
+- ES6+ support
+- `localStorage` for theme persistence
+- `window.matchMedia` for theme detection
+- Server-side rendering support with graceful fallbacks

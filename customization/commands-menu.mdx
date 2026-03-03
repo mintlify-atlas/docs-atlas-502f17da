@@ -1,0 +1,449 @@
+---
+title: Customizing the Commands Menu
+description: Configure and extend the slash (/) command menu in WebEditor
+---
+
+## Overview
+
+The commands menu appears when users type `/` in the editor. It provides quick access to blocks, components, and formatting options. The menu is fully customizable through the `command-system.tsx` configuration.
+
+## Command Types
+
+WebEditor supports three types of commands:
+
+### Simple Commands
+
+Commands that insert text or markdown:
+
+```typescript
+export interface SimpleCommand {
+  id: string;
+  name: string;
+  description: string;
+  icon: typeof Hash;
+  write: string;
+}
+```
+
+Example:
+
+```typescript
+{
+  id: "h1",
+  name: "Heading 1",
+  icon: Heading1,
+  description: "Big section heading",
+  write: "# "
+}
+```
+
+### Component Commands
+
+Commands that insert custom components:
+
+```typescript
+export interface ComponentCommand {
+  id: string;
+  name: string;
+  description: string;
+  icon: typeof Hash;
+  componentName: string;
+}
+```
+
+Example:
+
+```typescript
+{
+  id: "code",
+  name: "Code",
+  icon: Code,
+  description: "Capture a code snippet",
+  componentName: "code_snippet",
+}
+```
+
+### Attribute Commands
+
+Commands that prompt for attributes before inserting:
+
+```typescript
+export interface AttributeCommand {
+  id: string;
+  name: string;
+  description: string;
+  icon: typeof Hash;
+  componentName: keyof typeof COMPONENT_ATTRIBUTES;
+  requiresAttributes: true;
+}
+```
+
+## Default Commands
+
+Here's the complete default command menu configuration:
+
+```typescript
+import {
+  Heading1, Heading2, Heading3, AlignLeft, List,
+  Code, Network, Quote, CreditCard, Minus,
+  AlertCircle, ArrowUpFromDot, ListCollapse,
+  Columns, Sparkles, FileText, Frame, Hash
+} from "lucide-react";
+
+export const commandMenuSetup: CommandItem[] = [
+  // Text & Headings
+  {
+    id: "h1",
+    name: "Heading 1",
+    icon: Heading1,
+    description: "Big section heading",
+    write: "# "
+  },
+  {
+    id: "h2",
+    name: "Heading 2",
+    icon: Heading2,
+    description: "Medium section heading",
+    write: "## "
+  },
+  {
+    id: "h3",
+    name: "Heading 3",
+    icon: Heading3,
+    description: "Small section heading",
+    write: "### "
+  },
+  {
+    id: "paragraph",
+    name: "Text",
+    icon: AlignLeft,
+    description: "Just start writing with plain text",
+    write: ""
+  },
+  {
+    id: "bullet",
+    name: "Bulleted list",
+    icon: List,
+    description: "Create a simple bulleted list",
+    write: "- "
+  },
+
+  // Code & Diagrams
+  {
+    id: "code",
+    name: "Code",
+    icon: Code,
+    description: "Capture a code snippet",
+    componentName: "code_snippet",
+  },
+  {
+    id: "mermaid",
+    name: "Mermaid",
+    icon: Network,
+    description: "Create a mermaid diagram",
+    componentName: "mermaid",
+  },
+  {
+    id: "quote",
+    name: "Quote",
+    icon: Quote,
+    description: "Capture a quote",
+    write: "> "
+  },
+
+  { separator: true },
+
+  // Components
+  {
+    id: "card",
+    name: "Card",
+    icon: CreditCard,
+    description: "Create a horizontal or vertical card",
+    componentName: "card",
+  },
+  {
+    id: "callout",
+    name: "Callout",
+    icon: AlertCircle,
+    description: "Add a callout (info, warning, caution, etc.)",
+    componentName: "callout",
+  },
+  {
+    id: "step",
+    name: "Step",
+    icon: ArrowUpFromDot,
+    description: "Create a step",
+    componentName: "step",
+  },
+  {
+    id: "accordion",
+    name: "Accordion",
+    icon: ListCollapse,
+    description: "Add an accordion section",
+    componentName: "accordion",
+  },
+  {
+    id: "tabs",
+    name: "Tabs",
+    icon: List,
+    description: "Create a tabbed interface",
+    componentName: "tabs",
+  },
+  {
+    id: "columns",
+    name: "Columns",
+    icon: Columns,
+    description: "Create a responsive columns/grid layout",
+    componentName: "columns",
+  },
+  {
+    id: "icon",
+    name: "Icon",
+    icon: Sparkles,
+    description: "Insert an icon from Lucide icons",
+    componentName: "icon",
+  },
+  {
+    id: "field",
+    name: "Parameter Field",
+    icon: FileText,
+    description: "Document a parameter with name, type, and description",
+    componentName: "field",
+  },
+  {
+    id: "frame",
+    name: "Frame",
+    icon: Frame,
+    description: "Add a frame with padding and optional caption",
+    componentName: "frame",
+  },
+  {
+    id: "badge",
+    name: "Badge",
+    icon: Hash,
+    description: "Add a badge with custom text and styling",
+    componentName: "badge",
+  },
+  {
+    id: "break",
+    name: "Break",
+    icon: Minus,
+    description: "Add spacing between content",
+    componentName: "break",
+  },
+];
+```
+
+## Command Separators
+
+Add visual separators to group related commands:
+
+```typescript
+{ separator: true }
+```
+
+## Helper Functions
+
+### Filter Commands by Type
+
+```typescript
+import {
+  getSimpleCommands,
+  getAttributeCommands,
+  getComponentCommands
+} from "./command-system";
+
+const simpleCommands = getSimpleCommands();
+const attributeCommands = getAttributeCommands();
+const componentCommands = getComponentCommands();
+```
+
+### Search Commands
+
+```typescript
+import { filterCommands } from "./command-system";
+
+const results = filterCommands("heading");
+// Returns commands matching "heading" in name, description, or id
+```
+
+### Type Guards
+
+```typescript
+import {
+  isAttributeCommand,
+  isComponentCommand
+} from "./command-system";
+
+if (isComponentCommand(command)) {
+  // Insert component
+  insertComponent(command.componentName);
+} else if (isAttributeCommand(command)) {
+  // Show attribute dialog
+  showAttributeDialog(command.componentName);
+}
+```
+
+## Adding Custom Commands
+
+### 1. Simple Text Command
+
+```typescript
+const customCommand: SimpleCommand = {
+  id: "signature",
+  name: "Signature",
+  icon: FileText,
+  description: "Insert your signature",
+  write: "\n\n---\nYour Name\n"
+};
+
+commandMenuSetup.push(customCommand);
+```
+
+### 2. Component Command
+
+```typescript
+const customComponent: ComponentCommand = {
+  id: "video",
+  name: "Video",
+  icon: Video,
+  description: "Embed a video",
+  componentName: "video_embed",
+};
+
+commandMenuSetup.push(customComponent);
+```
+
+### 3. Attribute Command
+
+First, define the attribute configuration:
+
+```typescript
+// In attribute-prompts.tsx
+export const COMPONENT_ATTRIBUTES = {
+  // ... existing configs
+  custom_card: {
+    title: "Create Custom Card",
+    description: "Configure your custom card",
+    fields: [
+      {
+        name: "title",
+        label: "Title",
+        type: "text" as AttributeFieldType,
+        required: true,
+      },
+      {
+        name: "color",
+        label: "Color",
+        type: "text" as AttributeFieldType,
+        defaultValue: "blue",
+      },
+    ],
+  },
+};
+```
+
+Then add the command:
+
+```typescript
+const attributeCommand: AttributeCommand = {
+  id: "custom-card",
+  name: "Custom Card",
+  icon: CreditCard,
+  description: "Create a custom styled card",
+  componentName: "custom_card",
+  requiresAttributes: true,
+};
+
+commandMenuSetup.push(attributeCommand);
+```
+
+## Customizing Icons
+
+Use any Lucide React icon:
+
+```typescript
+import {
+  Sparkles, Zap, Heart, Star, Rocket
+} from "lucide-react";
+
+const command = {
+  id: "special",
+  name: "Special Block",
+  icon: Sparkles, // Custom icon
+  description: "Something special",
+  write: "✨ "
+};
+```
+
+## Organizing Commands
+
+Group commands logically with separators:
+
+```typescript
+export const commandMenuSetup: CommandItem[] = [
+  // Basic formatting
+  { id: "h1", name: "Heading 1", /* ... */ },
+  { id: "h2", name: "Heading 2", /* ... */ },
+  { id: "paragraph", name: "Text", /* ... */ },
+
+  { separator: true },
+
+  // Advanced components
+  { id: "card", name: "Card", /* ... */ },
+  { id: "callout", name: "Callout", /* ... */ },
+
+  { separator: true },
+
+  // Media
+  { id: "code", name: "Code", /* ... */ },
+  { id: "mermaid", name: "Mermaid", /* ... */ },
+];
+```
+
+## Search and Filtering
+
+The command menu automatically filters commands as users type:
+
+```typescript
+export function filterCommands(searchTerm: string): CommandItem[] {
+  if (!searchTerm.trim()) {
+    return commandMenuSetup;
+  }
+
+  const lowerSearch = searchTerm.toLowerCase();
+
+  const filteredCommands = commandMenuSetup.filter((item) => {
+    if ("separator" in item) return false;
+
+    const command = item as Command;
+    return (
+      command.name.toLowerCase().includes(lowerSearch) ||
+      command.description.toLowerCase().includes(lowerSearch) ||
+      command.id.toLowerCase().includes(lowerSearch)
+    );
+  });
+
+  return filteredCommands;
+}
+```
+
+## Best Practices
+
+<Card title="Command Menu Tips" icon="Lightbulb">
+  - Keep command names short and descriptive
+  - Use clear, action-oriented descriptions
+  - Choose intuitive icons that match the command purpose
+  - Group related commands with separators
+  - Limit the number of commands to avoid overwhelming users
+</Card>
+
+<Callout type="tip">
+  The command menu searches across the `name`, `description`, and `id` fields, so choose these values carefully for better discoverability.
+</Callout>
+
+## Next Steps
+
+- Create [custom components](/customization/custom-components) for your commands
+- Learn about [styling](/customization/styling) component appearances
+- Configure the [marks menu](/customization/marks-menu) for text formatting

@@ -1,0 +1,204 @@
+---
+title: Keyboard Shortcuts
+description: Available keyboard shortcuts and key bindings in WebEditor
+---
+
+WebEditor supports a variety of keyboard shortcuts for efficient text editing, formatting, and navigation. These shortcuts follow common conventions from popular editors.
+
+## Undo and Redo
+
+<AccordionGroup>
+  <Accordion title="Undo">
+    **Shortcut**: `Mod-z` (Cmd-Z on Mac, Ctrl-Z on Windows/Linux)
+    
+    Undo the last change to the document.
+  </Accordion>
+  
+  <Accordion title="Redo">
+    **Shortcut**: `Mod-r` (Cmd-R on Mac, Ctrl-R on Windows/Linux)
+    
+    Redo the last undone change.
+  </Accordion>
+</AccordionGroup>
+
+<Note>
+Undo/redo is powered by ProseMirror's history plugin and tracks all document changes (line 314 in index.tsx:314).
+</Note>
+
+## Navigation and Selection
+
+<AccordionGroup>
+  <Accordion title="Navigate Command Menu">
+    **Arrow Up/Down**: Navigate through command menu items
+    
+    When the command menu (/) is open, use arrow keys to select different commands. The selection skips separator items automatically (line 429-456 in index.tsx:429-456).
+  </Accordion>
+  
+  <Accordion title="Select Command">
+    **Enter**: Execute the selected command or mark
+    
+    When a command menu is open, pressing Enter will execute the currently highlighted command (line 469-480 in index.tsx:469-480).
+  </Accordion>
+  
+  <Accordion title="Close Menu">
+    **Escape**: Close command or marks menu
+    
+    Closes any open menu and returns focus to the editor (line 460-467 in index.tsx:460-467).
+  </Accordion>
+</AccordionGroup>
+
+## List Operations
+
+<AccordionGroup>
+  <Accordion title="New List Item">
+    **Enter**: Create a new list item
+    
+    When inside a list item with content, pressing Enter creates a new list item below (line 85-102 in markdown/input.tsx:85-102).
+  </Accordion>
+  
+  <Accordion title="Exit List">
+    **Enter** (in empty list item): Exit the list
+    
+    When inside an empty list item, pressing Enter lifts the item out of the list, effectively ending the list (line 92-95 in markdown/input.tsx:92-95).
+  </Accordion>
+  
+  <Accordion title="Indent List Item">
+    **Tab**: Increase list item indentation
+    
+    Sinks the current list item one level deeper, creating nested lists (line 104-113 in markdown/input.tsx:104-113).
+  </Accordion>
+</AccordionGroup>
+
+## Component Navigation
+
+<AccordionGroup>
+  <Accordion title="Exit Card Component">
+    **Mod-Enter** (Cmd-Enter on Mac, Ctrl-Enter on Windows/Linux): Exit a card
+    
+    When editing inside a card component, this shortcut creates a new paragraph after the card and moves the cursor there (line 11-37 in keymap.ts:11-37).
+  </Accordion>
+  
+  <Accordion title="Delete and Exit Card">
+    **Backspace** (in empty card content): Delete content and exit card
+    
+    When at the start of the only remaining block in a card, backspace deletes that block and positions the cursor after the card (line 40-80 in keymap.ts:40-80).
+  </Accordion>
+</AccordionGroup>
+
+## Command and Marks Menu
+
+<AccordionGroup>
+  <Accordion title="Open Commands Menu">
+    **/** (forward slash): Open component commands menu
+    
+    When at the beginning of an empty paragraph or at the start of a line, typing `/` opens the commands menu for inserting components like cards, callouts, and code snippets (line 254-293 in index.tsx:254-293).
+  </Accordion>
+  
+  <Accordion title="Open Marks Menu">
+    **/** (with text selected): Open text formatting marks menu
+    
+    When text is selected, typing `/` opens the marks menu for applying formatting like bold, italic, and tooltips (line 296-308 in index.tsx:296-308).
+  </Accordion>
+</AccordionGroup>
+
+<Warning>
+The `/` shortcut does not trigger when focused inside a CodeMirror code editor (code snippet component). This prevents conflicts with typing code (line 260-268 in index.tsx:260-268).
+</Warning>
+
+## Markdown Input Rules
+
+WebEditor automatically converts Markdown syntax as you type:
+
+### Text Formatting
+
+<CardGroup cols={2}>
+  <Card title="Bold">
+    Type `**text**` to create **bold text**
+    
+    The asterisks are automatically removed and the text becomes bold (line 37-51 in markdown/input.tsx:37-51).
+  </Card>
+  
+  <Card title="Italic">
+    Type `_text_` to create *italic text*
+    
+    The underscores are automatically removed and the text becomes italic (line 53-67 in markdown/input.tsx:53-67).
+  </Card>
+  
+  <Card title="Strikethrough">
+    Type `~~text~~` to create ~~strikethrough text~~
+    
+    The tildes are automatically removed and the text becomes strikethrough (line 69-83 in markdown/input.tsx:69-83).
+  </Card>
+</CardGroup>
+
+### Block Elements
+
+<CardGroup cols={2}>
+  <Card title="Headings">
+    Type `#` to `####` followed by space for headings (H1-H4)
+    
+    Example: `## Heading` creates a level 2 heading (line 25-27 in markdown/input.tsx:25-27).
+  </Card>
+  
+  <Card title="Unordered List">
+    Type `*`, `-`, or `+` followed by space to start a bullet list
+    
+    (line 29 in markdown/input.tsx:29)
+  </Card>
+  
+  <Card title="Ordered List">
+    Type `1.` followed by space to start a numbered list
+    
+    (line 31 in markdown/input.tsx:31)
+  </Card>
+  
+  <Card title="Blockquote">
+    Type `>` followed by space to create a blockquote
+    
+    (line 33 in markdown/input.tsx:33)
+  </Card>
+</CardGroup>
+
+## Base ProseMirror Keybindings
+
+WebEditor includes ProseMirror's base keymap, which provides standard editing shortcuts:
+
+- **Mod-b**: Toggle bold (if not overridden)
+- **Mod-i**: Toggle italic (if not overridden)
+- **Arrow keys**: Navigate cursor
+- **Shift + Arrow keys**: Extend selection
+- **Mod-a**: Select all
+- **Backspace/Delete**: Delete characters
+
+<Tip>
+"Mod" refers to Cmd on macOS and Ctrl on Windows/Linux, ensuring shortcuts work across platforms.
+</Tip>
+
+## Custom Keybindings
+
+The keymap system is extensible. Custom commands can be added through the `keymapPlugin` function (line 82-90 in keymap.ts:82-90):
+
+```tsx
+import { keymapPlugin } from "./keymap";
+import { undo, redo } from "prosemirror-history";
+
+const plugins = [
+  keymapPlugin({
+    "Mod-z": undo,
+    "Mod-r": redo,
+    // Add custom shortcuts here
+  }),
+];
+```
+
+## Interaction with Components
+
+Some keyboard shortcuts are context-aware and behave differently based on the current component:
+
+1. **Code Snippets**: The `/` shortcut is disabled when typing in code blocks to avoid conflicts
+2. **Cards**: Special handling for Enter and Backspace to manage content flow
+3. **Lists**: Enter and Tab have special behavior for creating and indenting list items
+
+<Note>
+Keyboard shortcuts are implemented using ProseMirror's keymap plugin, which provides a clean way to define and override key bindings based on editor state and context.
+</Note>

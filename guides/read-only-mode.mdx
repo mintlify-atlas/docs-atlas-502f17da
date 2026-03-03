@@ -1,0 +1,199 @@
+---
+title: Read-Only Mode
+description: Making the editor read-only to display content without editing capabilities
+---
+
+WebEditor can be configured as a read-only viewer, preventing users from editing content while still displaying rich text and components. This is useful for displaying documentation, previews, or published content.
+
+## Basic Read-Only Mode
+
+Set the `editable` prop to `false` to make the editor read-only:
+
+```tsx
+import { WebEditor } from "@devscribe-team/webeditor";
+import "@devscribe-team/webeditor/styles";
+
+function App() {
+  const content = `# Documentation
+
+This content is **read-only** and cannot be edited.`;
+
+  return (
+    <WebEditor 
+      value={content}
+      editable={false}
+    />
+  );
+}
+```
+
+## Props
+
+<ParamField path="editable" type="boolean" default="true">
+  Controls whether the editor is editable. When set to `false`, the editor becomes read-only and users cannot modify content.
+</ParamField>
+
+## What Changes in Read-Only Mode
+
+When `editable={false}`, the following behaviors change:
+
+### Disabled Features
+
+1. **No text editing**: Users cannot type, delete, or modify text
+2. **No command menu**: The `/` command menu for inserting components is disabled
+3. **No marks menu**: The `/` marks menu for text formatting is hidden
+4. **No command hint**: The "Press '/' for commands and marks" hint is hidden (line 714 in index.tsx:714)
+5. **Component editing**: Interactive component editing controls are disabled
+
+### Preserved Features
+
+1. **Text selection**: Users can still select and copy text
+2. **Scrolling**: The editor content remains scrollable
+3. **Component rendering**: All components (cards, callouts, code snippets, etc.) render normally
+4. **Interactive tooltips**: Tooltip marks still show their content on hover (though editing is disabled)
+
+## Implementation Details
+
+The `editable` prop is propagated throughout the editor:
+
+1. **ProseMirror configuration**: Set via the `editable` function in ProseMirror (line 664 in index.tsx:664)
+2. **Context provider**: The `EditorEditableProvider` wraps the editor and makes the state available to all components (line 525 in index.tsx:525)
+3. **Component access**: Child components can access the editable state using the `useEditorEditable` hook
+
+```tsx
+import { useEditorEditable } from "@devscribe-team/webeditor";
+
+function CustomComponent() {
+  const editable = useEditorEditable();
+  
+  return (
+    <div>
+      {editable ? (
+        <button>Edit</button>
+      ) : (
+        <span>Read-only</span>
+      )}
+    </div>
+  );
+}
+```
+
+## Content Preview Pattern
+
+A common use case is to show both an editable and preview mode:
+
+```tsx
+import { WebEditor } from "@devscribe-team/webeditor";
+import { useState } from "react";
+
+function DocumentWithPreview() {
+  const [content, setContent] = useState("");
+  const [mode, setMode] = useState<"edit" | "preview">("edit");
+
+  return (
+    <div>
+      <div className="toolbar">
+        <button 
+          onClick={() => setMode("edit")}
+          disabled={mode === "edit"}
+        >
+          Edit
+        </button>
+        <button 
+          onClick={() => setMode("preview")}
+          disabled={mode === "preview"}
+        >
+          Preview
+        </button>
+      </div>
+      
+      <WebEditor
+        value={content}
+        onChange={setContent}
+        editable={mode === "edit"}
+      />
+    </div>
+  );
+}
+```
+
+## Split View Editor
+
+Display editable and read-only views side by side:
+
+```tsx
+import { WebEditor } from "@devscribe-team/webeditor";
+import { useState } from "react";
+
+function SplitViewEditor() {
+  const [content, setContent] = useState("");
+
+  return (
+    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
+      <div>
+        <h2>Editor</h2>
+        <WebEditor
+          value={content}
+          onChange={setContent}
+          editable={true}
+        />
+      </div>
+      <div>
+        <h2>Preview</h2>
+        <WebEditor
+          value={content}
+          editable={false}
+        />
+      </div>
+    </div>
+  );
+}
+```
+
+## Document Viewer
+
+Create a pure document viewer without any editing capabilities:
+
+```tsx
+import { WebEditor } from "@devscribe-team/webeditor";
+import { useEffect, useState } from "react";
+
+function DocumentViewer({ documentId }: { documentId: string }) {
+  const [content, setContent] = useState("");
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    async function loadDocument() {
+      const response = await fetch(`/api/documents/${documentId}`);
+      const data = await response.text();
+      setContent(data);
+      setLoading(false);
+    }
+    loadDocument();
+  }, [documentId]);
+
+  if (loading) return <div>Loading...</div>;
+
+  return (
+    <div className="document-viewer">
+      <WebEditor 
+        value={content}
+        editable={false}
+      />
+    </div>
+  );
+}
+```
+
+<Tip>
+Read-only mode is perfect for:
+- Documentation sites
+- Blog post displays
+- Content previews
+- Archived or published content
+- Collaborative viewing without editing permissions
+</Tip>
+
+<Note>
+Even in read-only mode, the editor still processes the full ProseMirror state. For purely static content that never changes, consider rendering the HTML directly instead of using the editor.
+</Note>

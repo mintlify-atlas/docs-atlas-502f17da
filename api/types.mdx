@@ -1,0 +1,281 @@
+---
+title: Types
+description: TypeScript type definitions for WebEditor
+---
+
+## Types
+
+Complete TypeScript type definitions exported by the WebEditor package.
+
+### Theme
+
+The theme type represents the user's theme preference.
+
+```tsx
+type Theme = 'light' | 'dark' | 'auto'
+```
+
+#### Values
+
+- `'light'`: Force light mode regardless of system preference
+- `'dark'`: Force dark mode regardless of system preference
+- `'auto'`: Follow the system/browser preference
+
+#### Usage
+
+```tsx
+import { Theme, useTheme } from '@devscribe-team/webeditor';
+
+function setUserTheme(theme: Theme) {
+  const { setTheme } = useTheme();
+  setTheme(theme);
+}
+```
+
+### WebEditorProps
+
+Props interface for the WebEditor component (not explicitly exported, but inferred).
+
+```tsx
+interface WebEditorProps {
+  value?: string;
+  editable?: boolean;
+  onChange?: (doc: string) => void;
+}
+```
+
+#### Properties
+
+<ResponseField name="value" type="string" optional>
+  Initial Markdown/MDX content for the editor. When this prop changes, the editor state is re-initialized.
+</ResponseField>
+
+<ResponseField name="editable" type="boolean" default="true" optional>
+  Whether the editor content can be modified. Set to `false` for read-only mode.
+</ResponseField>
+
+<ResponseField name="onChange" type="(doc: string) => void" optional>
+  Callback invoked when content changes. Receives the updated content as an HTML string.
+</ResponseField>
+
+#### Usage
+
+```tsx
+import { WebEditor } from '@devscribe-team/webeditor';
+
+function MyEditor() {
+  const props: WebEditorProps = {
+    value: '# Hello',
+    editable: true,
+    onChange: (doc) => console.log(doc)
+  };
+
+  return <WebEditor {...props} />;
+}
+```
+
+### UseThemeReturn
+
+Return type of the `useTheme` hook (not explicitly exported, but inferred).
+
+```tsx
+interface UseThemeReturn {
+  theme: Theme;
+  resolvedTheme: 'light' | 'dark';
+  setTheme: (theme: Theme) => void;
+  toggleTheme: () => void;
+}
+```
+
+#### Properties
+
+<ResponseField name="theme" type="Theme">
+  The current theme setting (`'light'`, `'dark'`, or `'auto'`).
+</ResponseField>
+
+<ResponseField name="resolvedTheme" type="'light' | 'dark'">
+  The actual theme currently applied. Always either `'light'` or `'dark'`, never `'auto'`.
+</ResponseField>
+
+<ResponseField name="setTheme" type="(theme: Theme) => void">
+  Function to change the theme. Updates state and saves to localStorage.
+</ResponseField>
+
+<ResponseField name="toggleTheme" type="() => void">
+  Cycles through themes: `auto` → `light` → `dark` → `auto`.
+</ResponseField>
+
+#### Usage
+
+```tsx
+import { useTheme } from '@devscribe-team/webeditor';
+
+function Component() {
+  const themeControls: UseThemeReturn = useTheme();
+  
+  return (
+    <button onClick={themeControls.toggleTheme}>
+      Current: {themeControls.resolvedTheme}
+    </button>
+  );
+}
+```
+
+## Internal Types
+
+The following types are used internally by WebEditor but are not exported from the package. They are documented here for reference.
+
+### ProseMirror Schema Types
+
+WebEditor uses a custom ProseMirror schema that extends the base markdown schema with additional nodes and marks:
+
+#### Custom Nodes
+
+- `card`: Card component container
+- `tabs`: Tabbed content container  
+- `callout`: Highlighted callout/alert block
+- `badge`: Inline badge/label
+- `code_snippet`: Syntax-highlighted code block (replaces standard `code_block`)
+- `break`: Visual separator/divider
+- `step`: Step in a sequence
+- `accordion`: Collapsible accordion section
+- `columns`: Multi-column layout container
+- `column`: Individual column within columns
+- `foo`: Example/demo component
+- `icon`: Inline icon from Lucide
+- `mermaid`: Mermaid diagram
+- `field`: Form field component
+- `frame`: Embedded content frame
+
+#### Custom Marks
+
+- `strikethrough`: Strikethrough text formatting (renders as `<s>` tag)
+- `tooltip_mark`: Text with tooltip on hover (renders as `<span data-tooltip="...">` with special styling)
+
+### Command Types
+
+Internal types for the command menu system:
+
+```tsx
+// Component command for inserting custom components
+interface ComponentCommand {
+  id: string;
+  name: string;
+  description?: string;
+  icon: LucideIcon;
+  componentName: string;
+}
+
+// Text insertion command
+interface WriteCommand {
+  id: string;
+  name: string;
+  description?: string;
+  icon: LucideIcon;
+  write: string;
+}
+
+// Menu separator
+interface CommandSeparator {
+  separator: true;
+}
+
+type Command = ComponentCommand | WriteCommand;
+```
+
+### Mark Command Types
+
+Internal types for text formatting:
+
+```tsx
+// Simple mark command (bold, italic, etc.)
+interface SimpleMarkCommand {
+  id: string;
+  name: string;
+  description?: string;
+  icon: LucideIcon;
+  execute: (state: EditorState, dispatch: (tr: Transaction) => void) => void;
+}
+
+// Tooltip mark command (requires prompt)
+interface TooltipMarkCommand {
+  id: string;
+  name: string;
+  description?: string;
+  icon: LucideIcon;
+  requiresPrompt: true;
+}
+
+type MarkCommand = SimpleMarkCommand | TooltipMarkCommand;
+```
+
+## Type Utilities
+
+### Type Guards
+
+While not exported, WebEditor uses several type guard functions internally:
+
+```tsx
+// Check if a command is a component insertion command
+function isComponentCommand(cmd: Command): cmd is ComponentCommand {
+  return 'componentName' in cmd;
+}
+
+// Check if a mark command is simple (no prompt needed)
+function isSimpleMarkCommand(cmd: MarkCommand): cmd is SimpleMarkCommand {
+  return 'execute' in cmd;
+}
+
+// Check if a mark command requires a prompt
+function isTooltipMarkCommand(cmd: MarkCommand): cmd is TooltipMarkCommand {
+  return 'requiresPrompt' in cmd;
+}
+```
+
+## Import Examples
+
+### Importing Types
+
+```tsx
+import { Theme } from '@devscribe-team/webeditor';
+
+// Type is exported and can be used directly
+const myTheme: Theme = 'dark';
+```
+
+### Importing with Components
+
+```tsx
+import { WebEditor, useTheme, type Theme } from '@devscribe-team/webeditor';
+import '@devscribe-team/webeditor/styles';
+
+function App() {
+  const { theme, setTheme }: { theme: Theme; setTheme: (t: Theme) => void } = useTheme();
+  
+  return <WebEditor value="# Hello" />;
+}
+```
+
+### Type Inference
+
+TypeScript can infer most types automatically:
+
+```tsx
+import { useTheme } from '@devscribe-team/webeditor';
+
+function Component() {
+  // Types are automatically inferred
+  const { theme, resolvedTheme, setTheme, toggleTheme } = useTheme();
+  
+  // theme: Theme
+  // resolvedTheme: 'light' | 'dark'
+  // setTheme: (theme: Theme) => void
+  // toggleTheme: () => void
+}
+```
+
+## See Also
+
+- [WebEditor Component](/api/webeditor) - Main component API
+- [useTheme Hook](/api/use-theme) - Theme management hook
+- [Theme Provider](/api/theme-provider) - Theme system overview

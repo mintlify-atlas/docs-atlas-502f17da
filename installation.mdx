@@ -1,0 +1,131 @@
+---
+title: Installation
+description: Install WebEditor in your React project using npm, yarn, or pnpm.
+---
+
+# Installation
+
+WebEditor is available as an npm package and can be installed using your preferred package manager.
+
+## Package Managers
+
+<CodeGroup>
+
+```bash npm
+npm install @devscribe-team/webeditor
+```
+
+```bash yarn
+yarn add @devscribe-team/webeditor
+```
+
+```bash pnpm
+pnpm add @devscribe-team/webeditor
+```
+
+</CodeGroup>
+
+## Peer Dependencies
+
+WebEditor requires the following peer dependencies:
+
+- **React**: `>=18.0.0`
+- **React DOM**: `>=18.0.0`
+- **Tailwind CSS**: `>=4.0.0`
+
+<Note>
+  Make sure you have React 18+ and Tailwind CSS 4+ installed in your project before installing WebEditor.
+</Note>
+
+If you don't have these installed, add them to your project:
+
+<CodeGroup>
+
+```bash npm
+npm install react react-dom tailwindcss
+```
+
+```bash yarn
+yarn add react react-dom tailwindcss
+```
+
+```bash pnpm
+pnpm add react react-dom tailwindcss
+```
+
+</CodeGroup>
+
+## Import Styles
+
+After installation, you need to import the editor styles in your application:
+
+```tsx
+import "@devscribe-team/webeditor/styles";
+```
+
+<Warning>
+  The styles must be imported for the editor to render correctly. Import them in your root component or main entry file.
+</Warning>
+
+## Package Information
+
+**Package Name**: `@devscribe-team/webeditor`
+
+**Current Version**: `0.1.1`
+
+**License**: MIT
+
+**Repository**: [github.com/devscribe-team/webeditor](https://github.com/devscribe-team/webeditor)
+
+## TypeScript Support
+
+WebEditor is written in TypeScript and includes type definitions out of the box. No additional `@types` packages are needed.
+
+The package exports:
+
+```typescript
+export { WebEditor } from "./editor";
+export { useTheme, type Theme } from "./hooks/use-theme";
+```
+
+### Type Definitions
+
+The main exports include:
+
+- `WebEditor`: The main editor component
+- `useTheme`: Hook for managing theme
+- `Theme`: Type definition for theme values (`'light' | 'dark' | 'auto'`)
+
+## Verify Installation
+
+To verify that WebEditor is installed correctly, create a simple test component:
+
+```tsx
+import { WebEditor } from "@devscribe-team/webeditor";
+import "@devscribe-team/webeditor/styles";
+
+function TestEditor() {
+  return (
+    <div>
+      <h1>WebEditor Test</h1>
+      <WebEditor />
+    </div>
+  );
+}
+
+export default TestEditor;
+```
+
+If the editor renders without errors, your installation is successful!
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Quick Start" icon="rocket" href="/quickstart">
+    Build your first editor with WebEditor
+  </Card>
+  
+  <Card title="Theme Configuration" icon="palette" href="/concepts/theme-system">
+    Learn how to configure themes
+  </Card>
+</CardGroup>

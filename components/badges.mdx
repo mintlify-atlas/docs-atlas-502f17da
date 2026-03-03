@@ -1,0 +1,271 @@
+---
+title: Badges
+description: Add inline badges with custom text and styling
+---
+
+Badges are inline components that display short labels with customizable styling variants.
+
+## Usage
+
+Insert a badge using the `/` menu:
+
+```
+/badge
+```
+
+Or use the component tag:
+
+```
+<badge label="New" variant="default" />
+```
+
+## Badge Variants
+
+Badges support four visual variants:
+
+### Default (Primary)
+
+Primary color background with white text.
+
+```
+<badge label="New" variant="default" />
+```
+
+### Secondary
+
+Secondary color background.
+
+```
+<badge label="Beta" variant="secondary" />
+```
+
+### Destructive
+
+Red background for warnings or alerts.
+
+```
+<badge label="Deprecated" variant="destructive" />
+```
+
+### Outline
+
+Transparent background with border.
+
+```
+<badge label="Optional" variant="outline" />
+```
+
+## Attributes
+
+| Attribute | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `variant` | string | `"default"` | Badge style: `"default"`, `"secondary"`, `"destructive"`, or `"outline"` |
+| `label` | string | `""` | Badge text content |
+
+## Editing Badges
+
+In edit mode:
+
+1. Click the badge to open the editor
+2. Edit the label text
+3. Select a variant from the radio options
+4. Preview shows live badge appearance
+
+## Examples
+
+### Version Badge
+
+```
+<badge label="v2.0" variant="default" />
+```
+
+### Status Badge
+
+```
+<badge label="Coming Soon" variant="secondary" />
+```
+
+### Warning Badge
+
+```
+<badge label="Breaking Change" variant="destructive" />
+```
+
+### Info Badge
+
+```
+<badge label="Pro" variant="outline" />
+```
+
+### Inline Usage
+
+Badges are inline elements and can be used within text:
+
+```
+This feature is <badge label="New" variant="default" /> in version 2.0.
+```
+
+## Implementation Details
+
+### Node Spec
+
+```typescript
+// badge.tsx:12-38
+export const badgeNodeSpec: NodeSpec = {
+  group: "inline",
+  inline: true,
+  atom: true,
+  selectable: true,
+  attrs: {
+    variant: { default: "default" },
+    label: { default: "" },
+  },
+  parseDOM: [
+    {
+      tag: "badge",
+      getAttrs: (dom) => ({
+        variant: dom.getAttribute("variant") || "default",
+        label: dom.textContent || "",
+      }),
+    },
+  ],
+}
+```
+
+### Variant Styling
+
+```typescript
+// badge.tsx:214-227
+function badgeClassName(variant: string) {
+  const base = "inline-flex items-center justify-center rounded-md border px-2 py-0.5 
+    text-xs font-medium w-fit whitespace-nowrap shrink-0 gap-1 transition-[color,box-shadow]";
+  
+  switch (variant) {
+    case "secondary":
+      return `${base} bg-secondary text-secondary-foreground border-transparent`;
+    case "destructive":
+      return `${base} bg-destructive text-white border-transparent`;
+    case "outline":
+      return `${base} border text-foreground`;
+    case "default":
+    default:
+      return `${base} bg-primary text-primary-foreground border-transparent`;
+  }
+}
+```
+
+### Badge Editor Modal
+
+**Code reference:** `components/badge.tsx:41-211`
+
+The modal includes:
+
+```typescript
+interface BadgeEditModalProps {
+  open: boolean;
+  initialLabel: string;
+  initialVariant: string;
+  onCloseAction: () => void;
+  onSubmitAction: (values: {
+    label: string;
+    variant: string;
+  }) => void;
+  modalTitle?: string;
+}
+```
+
+Features:
+1. **Badge Text** input field
+2. **Badge Style** radio buttons with preview
+3. Live preview of each variant
+
+### Variant Options
+
+```typescript
+// badge.tsx:99-104
+const variantOptions = [
+  { value: "default", label: "Default (Primary)", color: "bg-primary text-primary-foreground" },
+  { value: "secondary", label: "Secondary", color: "bg-secondary text-secondary-foreground" },
+  { value: "destructive", label: "Destructive", color: "bg-destructive text-white" },
+  { value: "outline", label: "Outline", color: "border text-foreground bg-background" },
+]
+```
+
+### Input Rule
+
+```typescript
+// badge.tsx:304-329
+export const addBadgeRule = new InputRule(
+  /^<badge(?:\s+([^>]+))?(?:\s*\/>|\s*>)/,
+  (state, match, start, end) => {
+    const attrs = {
+      variant: "default",
+      label: "",
+    };
+    
+    if (match[1]) {
+      const variantMatch = match[1].match(/variant="([^"]*)"/); 
+      if (variantMatch) attrs.variant = variantMatch[1];
+      
+      const labelMatch = match[1].match(/label="([^"]*)"/); 
+      if (labelMatch) attrs.label = labelMatch[1];
+    }
+    
+    const badgeNode = schema.nodes.badge.create(attrs);
+    tr.replaceRangeWith(start, end, badgeNode);
+    
+    // Place selection after the badge
+    tr.setSelection(Selection.near(tr.doc.resolve(start + badgeNode.nodeSize)));
+    
+    return tr;
+  }
+);
+```
+
+### Insertion Function
+
+```typescript
+// badge.tsx:331-351
+export function insertBadge(state: EditorState): Transaction {
+  const { from, to } = state.selection;
+  
+  const attrs = {
+    variant: "default",
+    label: "New Badge",
+  };
+  
+  const badgeNode = state.schema.nodes.badge.create(attrs);
+  
+  let tr = state.tr;
+  if (from !== to) {
+    tr = tr.delete(from, to);
+  }
+  tr = tr.replaceSelectionWith(badgeNode);
+  
+  // Place selection after the badge
+  tr = tr.setSelection(Selection.near(tr.doc.resolve(tr.selection.from + badgeNode.nodeSize)));
+  
+  return tr;
+}
+```
+
+## Styling Details
+
+All badges share:
+
+- Small text size (text-xs)
+- Medium font weight
+- Minimal padding (px-2 py-0.5)
+- Rounded corners (rounded-md)
+- No wrapping (whitespace-nowrap)
+- Inline-flex display
+- Transition effects
+
+## Use Cases
+
+1. **Version labels** - Show version numbers
+2. **Status indicators** - Display feature status
+3. **Tags** - Categorize content
+4. **Alerts** - Inline warnings or notices
+5. **Feature flags** - Mark new or beta features
+6. **API labels** - Indicate endpoint types (GET, POST, etc.)

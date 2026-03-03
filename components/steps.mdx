@@ -1,0 +1,244 @@
+---
+title: Steps
+description: Create numbered step-by-step instructions
+---
+
+Steps create numbered, sequential instructions with automatic numbering and visual connecting lines.
+
+## Usage
+
+Insert a step using the `/` menu:
+
+```
+/step
+```
+
+Or use the component tag:
+
+```
+<step title="First Step" />
+```
+
+## Features
+
+- **Automatic numbering** - Steps are numbered sequentially
+- **Visual connections** - Connecting lines between steps
+- **Optional titles** - Add descriptive titles to steps
+- **Enter key support** - Press Enter in empty paragraph to create next step
+- **Editable numbers** - Click step numbers to manually adjust
+
+## Creating Sequential Steps
+
+When you're in a step and press Enter on an empty line, a new step is automatically created with the next number.
+
+## Attributes
+
+| Attribute | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `title` | string | `""` | Optional step title |
+| `stepNumber` | number | Auto | Step number (auto-increments) |
+
+## Editing Steps
+
+In edit mode:
+
+1. **Edit title:** Click the title to open the title editor
+2. **Change number:** Click the step number circle to edit
+3. **Edit content:** Click inside the step to edit content
+4. **Add new step:** Press Enter on empty line
+
+## Examples
+
+### Basic Steps
+
+```
+<step title="Install dependencies" />
+```
+
+### Steps Without Titles
+
+You can create steps without titles - just the number and content:
+
+```
+<step />
+```
+
+### Manual Step Numbers
+
+```
+<step title="Advanced Setup" stepNumber="5" />
+```
+
+## Auto-numbering
+
+Steps automatically find the next available number:
+
+**Code reference:** `components/steps.tsx:222-236`
+
+```typescript
+const findNextStepNumber = (state: EditorState): number => {
+  let maxStepNumber = 0;
+  
+  state.doc.descendants((node: Node) => {
+    if (node.type.name === "step") {
+      const stepNum = node.attrs.stepNumber || 1;
+      if (stepNum > maxStepNumber) {
+        maxStepNumber = stepNum;
+      }
+    }
+  });
+  
+  return maxStepNumber + 1;
+}
+```
+
+## Creating New Steps
+
+Press Enter on an empty paragraph inside a step:
+
+**Code reference:** `components/steps.tsx:70-115`
+
+```typescript
+const createNewStep = useEditorEventCallback((view) => {
+  const { getPos } = nodeProps;
+  const pos = getPos();
+  const tr = view.state.tr;
+  
+  // Find the next step number
+  const nextStepNumber = stepNumber + 1;
+  const insertPos = pos + nodeProps.node.nodeSize;
+  
+  // Check if there's already a step after this one and renumber if needed
+  const $insertPos = tr.doc.resolve(insertPos);
+  if ($insertPos.nodeAfter && $insertPos.nodeAfter.type.name === "step") {
+    // Renumber subsequent steps
+    const updateStepNumbers = (doc: Node, startPos: number, increment: number) => {
+      doc.descendants((node: Node, pos: number) => {
+        if (node.type.name === "step" && pos >= startPos) {
+          const currentNumber = node.attrs.stepNumber;
+          tr.setNodeMarkup(pos, undefined, {
+            ...node.attrs,
+            stepNumber: currentNumber + increment,
+          });
+        }
+      });
+    };
+    updateStepNumbers(tr.doc, insertPos, 1);
+  }
+  
+  // Create and insert new step
+  const newStep = view.state.schema.nodes.step.create(
+    { title: "", stepNumber: nextStepNumber },
+    view.state.schema.nodes.paragraph.create(),
+  );
+  
+  tr.insert(insertPos, newStep);
+  tr.setSelection(Selection.near(tr.doc.resolve(insertPos + 1)));
+  
+  view.dispatch(tr);
+  view.focus();
+});
+```
+
+## Visual Design
+
+### Step Number Circle
+
+```typescript
+// steps.tsx:164-185
+<button
+  className="flex h-8 w-8 min-h-[2rem] min-w-[2rem] items-center justify-center 
+    rounded-full bg-secondary text-sm font-semibold text-secondary-foreground"
+  onClick={() => setNumberModalOpen(true)}
+>
+  {stepNumber}
+</button>
+```
+
+### Connecting Line
+
+```typescript
+// steps.tsx:187
+<div className="mt-2 h-full min-h-[3rem] w-px bg-border" />
+```
+
+The connecting line:
+- 1px wide
+- Extends the full height of the step content
+- Minimum height of 3rem
+- Uses border color for consistency
+
+## Implementation Details
+
+### Node Spec
+
+```typescript
+// steps.tsx:12-37
+export const stepNodeSpec: NodeSpec = {
+  group: "block",
+  content: "block+",
+  attrs: {
+    title: { default: "" },
+    stepNumber: { default: 1 },
+  },
+  selectable: true,
+  parseDOM: [
+    {
+      tag: "step",
+      getAttrs: (dom) => ({
+        title: dom.getAttribute("title") || "",
+        stepNumber: parseInt(dom.getAttribute("stepNumber") || "1"),
+      }),
+    },
+  ],
+}
+```
+
+### Enter Key Handler
+
+```typescript
+// steps.tsx:118-133
+useStopEvent((view, event) => {
+  if (!editable) return false;
+  
+  if (event instanceof KeyboardEvent && event.key === "Enter" && !event.shiftKey) {
+    const { $head, empty } = view.state.selection;
+    
+    // Check if we're at the end of an empty paragraph in this step
+    if (empty && $head.parent.type.name === "paragraph" && $head.parent.content.size === 0) {
+      event.preventDefault();
+      createNewStep();
+      return true;
+    }
+  }
+  
+  return false;
+});
+```
+
+## Layout
+
+Steps use flexbox layout:
+
+```typescript
+// steps.tsx:136
+<div className="relative flex gap-4">
+  {/* Step number column */}
+  <div className="flex flex-col items-center flex-shrink-0">
+    {/* Number circle and line */}
+  </div>
+  
+  {/* Content column */}
+  <div className="flex-1 pb-4">
+    {/* Title and content */}
+  </div>
+</div>
+```
+
+## Use Cases
+
+1. **Tutorials** - Step-by-step instructions
+2. **Installation guides** - Sequential setup instructions
+3. **Recipes** - Cooking or procedure steps
+4. **Workflows** - Process documentation
+5. **Checklists** - Sequential tasks

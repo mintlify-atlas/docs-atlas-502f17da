@@ -1,0 +1,220 @@
+---
+title: Cards
+description: Create horizontal or vertical cards with icons and links
+---
+
+Cards are versatile components for displaying content with titles, icons, descriptions, and optional links.
+
+## Usage
+
+Insert a card using the `/` menu:
+
+```
+/card
+```
+
+Or use the component tag:
+
+```
+<card title="Card Title" icon="FileText" />
+```
+
+## Card Layouts
+
+### Vertical Layout (Default)
+
+Vertical cards display the icon above the content.
+
+<Card title="Vertical Card" icon="star">
+  This card uses vertical layout with the icon displayed above the title and content.
+</Card>
+
+### Horizontal Layout
+
+Horizontal cards display the icon to the left of the content.
+
+<Card title="Horizontal Card" icon="zap" horizontal>
+  This card uses horizontal layout with the icon displayed to the left of the content.
+</Card>
+
+## Attributes
+
+| Attribute | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `title` | string | `"Card Title"` | The card title |
+| `icon` | string | `null` | Lucide icon name (e.g., `"FileText"`, `"Book"`, `"Star"`) |
+| `showIcon` | boolean | `true` | Whether to display the icon |
+| `horizontal` | boolean | `false` | Use horizontal layout instead of vertical |
+| `href` | string | `null` | Optional URL to make the card clickable |
+
+## Editing Cards
+
+In edit mode:
+
+1. **Change title:** Click the title to open the title editor
+2. **Change icon:** Click the icon to open the icon selector
+3. **Toggle layout:** Hover over the card and click the layout toggle button
+4. **Edit content:** Click inside the card to edit the content
+
+## Examples
+
+### Basic Card
+
+```
+<card title="Getting Started" icon="Book" />
+```
+
+### Card with Link
+
+```
+<card 
+  title="Documentation" 
+  icon="FileText"
+  href="https://example.com/docs"
+/>
+```
+
+When a card has an `href`, clicking anywhere on the card opens the link.
+
+### Horizontal Card with Content
+
+```
+<card title="Quick Tip" icon="Lightbulb" horizontal />
+```
+
+Then add your content inside the card.
+
+### Card without Icon
+
+```
+<card title="Simple Card" showIcon={false} />
+```
+
+## Dynamic Icon Loading
+
+Cards use dynamic icon loading from the Lucide icon library. Icons are loaded on-demand and cached for performance.
+
+**Code reference:** `components/card.tsx:40-67`
+
+```typescript
+// Dynamic icon loading with caching
+const iconCache = new Map<string, React.ComponentType<any>>();
+
+async function loadIcon(iconName: string) {
+  const normalizedName = normalizeIconName(iconName);
+  
+  if (iconCache.has(normalizedName)) {
+    return iconCache.get(normalizedName);
+  }
+  
+  const mod = await import("lucide-react");
+  const IconComponent = mod[normalizedName];
+  
+  if (IconComponent) {
+    iconCache.set(normalizedName, IconComponent);
+    return IconComponent;
+  }
+  
+  return null;
+}
+```
+
+### Icon Name Normalization
+
+Icon names are automatically normalized to PascalCase:
+
+- `file-text` → `FileText`
+- `arrow_up` → `ArrowUp`
+- `camelCase` → `CamelCase`
+
+**Code reference:** `components/card.tsx:27-36`
+
+## Card Sizes
+
+Icon sizes differ based on layout:
+
+- **Vertical layout:** 32px (w-8 h-8)
+- **Horizontal layout:** 20px (w-5 h-5)
+
+## Implementation Details
+
+### Node Spec
+
+```typescript
+// card.tsx:218-254
+export const cardNodeSpec: NodeSpec = {
+  group: "block",
+  content: "block*",
+  attrs: {
+    title: { default: "Card Title" },
+    icon: { default: null },
+    showIcon: { default: true },
+    horizontal: { default: false },
+    href: { default: null },
+  },
+  selectable: true,
+  // parseDOM and toDOM implementations...
+}
+```
+
+### Layout Toggle
+
+**Code reference:** `components/card.tsx:407-426`
+
+```typescript
+const toggleLayout = useEditorEventCallback((view) => {
+  const { getPos, node } = nodeProps;
+  const pos = getPos();
+  
+  const tr = view.state.tr;
+  tr.setNodeMarkup(pos, undefined, {
+    ...node.attrs,
+    horizontal: !node.attrs.horizontal,
+  });
+  view.dispatch(tr);
+});
+```
+
+### Clickable Cards
+
+When an `href` is provided, an invisible anchor element is overlaid:
+
+**Code reference:** `components/card.tsx:568-578`
+
+```typescript
+{isClickable && (
+  <a
+    href={href}
+    className="absolute inset-0 z-10"
+    target="_blank"
+    rel="noopener noreferrer"
+    contentEditable={false}
+  >
+    <span className="sr-only">Open {title}</span>
+  </a>
+)}
+```
+
+## Styling
+
+Cards feature:
+
+- Border and shadow for depth
+- Hover effects when clickable (scale, shadow, border color)
+- Responsive layouts (horizontal layout stacks on mobile)
+- Focus ring for accessibility
+
+```typescript
+// card.tsx:310-318
+const getCardClasses = (horizontal: boolean, isClickable: boolean) => {
+  const baseClasses = `relative flex ${horizontal ? "flex-col sm:flex-row" : "flex-col"} 
+    border border-border bg-card shadow-sm rounded-lg w-full`;
+  
+  const hoverClasses = isClickable
+    ? "cursor-pointer transition-transform hover:shadow-lg hover:scale-[1.01] 
+       hover:border-primary/50 focus-within:ring-2"
+    : "";
+  
+  return `${baseClasses} ${hoverClasses}`;
+}
+```

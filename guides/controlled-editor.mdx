@@ -1,0 +1,155 @@
+---
+title: Controlled Editor
+description: Using WebEditor as a controlled component with value and onChange props
+---
+
+WebEditor can be used as a controlled component, allowing you to manage the editor's content through React state. This is useful when you need to programmatically control the editor content or synchronize it with external state.
+
+## Basic Controlled Usage
+
+The editor accepts `value` and `onChange` props to function as a controlled component:
+
+```tsx
+import { WebEditor } from "@devscribe-team/webeditor";
+import "@devscribe-team/webeditor/styles";
+import { useState } from "react";
+
+function App() {
+  const [content, setContent] = useState("");
+
+  return (
+    <WebEditor 
+      value={content}
+      onChange={(html) => setContent(html)}
+    />
+  );
+}
+```
+
+## Props
+
+<ParamField path="value" type="string" optional>
+  The editor's content as an HTML string. When provided, the editor becomes controlled and will re-initialize whenever this value changes.
+</ParamField>
+
+<ParamField path="onChange" type="(html: string) => void" optional>
+  Callback function that receives the updated HTML content whenever the document changes. This is called on every transaction that modifies the document.
+</ParamField>
+
+## How It Works
+
+Under the hood, WebEditor:
+
+1. **Converts value to editor state**: When the `value` prop is provided, it's converted from HTML to a ProseMirror document using the `mdxLikeToProseMirror` function (line 325 in index.tsx:325)
+2. **Re-initializes on value change**: The editor state is recreated whenever the `value` prop changes (line 323 in index.tsx:323)
+3. **Serializes on change**: On every document change, the editor serializes the ProseMirror document back to HTML using `proseMirrorToHTML` and calls the `onChange` callback (line 688 in index.tsx:688)
+
+<Note>
+The `onChange` callback is triggered on every transaction that modifies the document. For performance-critical applications, consider debouncing the callback to reduce the frequency of updates.
+</Note>
+
+## Loading Markdown Content
+
+The editor can accept Markdown content through the `value` prop. It will automatically convert it to the editor's internal format:
+
+```tsx
+import { WebEditor } from "@devscribe-team/webeditor";
+import { useState } from "react";
+
+function App() {
+  const [content, setContent] = useState(`# Hello World
+
+This is **bold** and this is _italic_.
+
+- List item 1
+- List item 2
+`);
+
+  return (
+    <WebEditor 
+      value={content}
+      onChange={(html) => setContent(html)}
+    />
+  );
+}
+```
+
+The conversion process:
+1. Markdown is preprocessed to HTML using the `preprocessMarkdownToHTML` function
+2. Gray matter (front matter) is automatically stripped
+3. Code blocks support language and title syntax: ` ```language#title `
+
+## Saving and Loading Files
+
+A common pattern is to load content from a file and save changes:
+
+```tsx
+import { WebEditor } from "@devscribe-team/webeditor";
+import { useState, useEffect } from "react";
+
+function DocumentEditor({ fileId }: { fileId: string }) {
+  const [content, setContent] = useState<string>("");
+  const [loading, setLoading] = useState(true);
+
+  // Load file content
+  useEffect(() => {
+    async function loadFile() {
+      setLoading(true);
+      const response = await fetch(`/api/files/${fileId}`);
+      const data = await response.text();
+      setContent(data);
+      setLoading(false);
+    }
+    loadFile();
+  }, [fileId]);
+
+  // Auto-save changes
+  const handleChange = async (html: string) => {
+    setContent(html);
+    await fetch(`/api/files/${fileId}`, {
+      method: "PUT",
+      headers: { "Content-Type": "text/html" },
+      body: html,
+    });
+  };
+
+  if (loading) return <div>Loading...</div>;
+
+  return (
+    <WebEditor 
+      value={content}
+      onChange={handleChange}
+    />
+  );
+}
+```
+
+## Uncontrolled Usage
+
+If you don't provide the `value` prop, the editor operates in uncontrolled mode with an empty initial state:
+
+```tsx
+import { WebEditor } from "@devscribe-team/webeditor";
+
+function App() {
+  return <WebEditor />;
+}
+```
+
+You can still listen to changes with `onChange` even in uncontrolled mode:
+
+```tsx
+import { WebEditor } from "@devscribe-team/webeditor";
+
+function App() {
+  return (
+    <WebEditor 
+      onChange={(html) => console.log("Content changed:", html)}
+    />
+  );
+}
+```
+
+<Warning>
+When the editor is controlled (has a `value` prop), changing the `value` will completely reset the editor state, including undo/redo history. Only update the `value` prop when loading new content, not for reflecting changes from `onChange`.
+</Warning>

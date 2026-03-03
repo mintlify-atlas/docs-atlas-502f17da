@@ -1,0 +1,87 @@
+---
+title: Introduction
+description: A completely dynamic, JSX-based rich text editor powered by ProseMirror. The alternative to BlockNote and TipTap you've been waiting for.
+---
+
+# WebEditor
+
+A completely dynamic, JSX-based rich text editor powered by [ProseMirror](https://prosemirror.net/).
+
+The alternative to BlockNote and TipTap you've been waiting for.
+
+## Key Features
+
+<CardGroup cols={2}>
+  <Card title="Markdown & JSX" icon="code" href="/quickstart">
+    Write Markdown and JSX seamlessly in a unified editing experience.
+  </Card>
+  
+  <Card title="Custom Components" icon="puzzle-piece" href="/components/overview">
+    Add custom nestable components with full React integration.
+  </Card>
+  
+  <Card title="Commands Menu" icon="slash" href="/customization/commands-menu">
+    Add components with a commands (/) menu for quick access.
+  </Card>
+  
+  <Card title="Marks System" icon="highlighter" href="/components/text-formatting">
+    Apply marks to text with a powerful marks (/) menu.
+  </Card>
+  
+  <Card title="Theme Detection" icon="moon" href="/concepts/theme-system">
+    Automatic theme detection with light/dark mode support.
+  </Card>
+  
+  <Card title="ProseMirror Powered" icon="bolt" href="https://prosemirror.net/">
+    Built on top of the robust ProseMirror framework.
+  </Card>
+</CardGroup>
+
+## What Makes WebEditor Different?
+
+WebEditor is designed for developers who need a rich text editor that feels native to React while providing the power and flexibility of ProseMirror. Unlike other editors:
+
+- **JSX-First**: Write custom components using familiar JSX syntax
+- **Truly Dynamic**: Components are rendered as React components, not static markup
+- **Markdown Native**: First-class Markdown support with MDX-like capabilities
+- **Theme Aware**: Automatically adapts to your application's light/dark theme
+- **Developer Friendly**: Built with TypeScript and a clean API
+
+<Note>
+  WebEditor requires React 18+ and Tailwind CSS 4+ as peer dependencies.
+</Note>
+
+## Quick Example
+
+Get started with WebEditor in just a few lines of code:
+
+```tsx
+import { WebEditor } from "@devscribe-team/webeditor";
+import "@devscribe-team/webeditor/styles";
+
+function App() {
+  return <WebEditor />;
+}
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Installation" icon="download" href="/installation">
+    Install WebEditor and set up your project
+  </Card>
+  
+  <Card title="Quick Start" icon="rocket" href="/quickstart">
+    Build your first editor in minutes
+  </Card>
+</CardGroup>
+
+## Open Source
+
+WebEditor is open source and MIT licensed. The work on the project started from [Devscribe](https://www.devscribeai.com/) and was open sourced thanks to their support.
+
+<CardGroup cols={1}>
+  <Card title="GitHub Repository" icon="github" href="https://github.com/devscribe-team/webeditor">
+    View the source code, report issues, and contribute
+  </Card>
+</CardGroup>

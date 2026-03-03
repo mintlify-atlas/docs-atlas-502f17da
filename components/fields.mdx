@@ -1,0 +1,287 @@
+---
+title: Parameter Fields
+description: Document API parameters with type information
+---
+
+Parameter fields document function or API parameters with name, type, required status, and description.
+
+## Usage
+
+Insert a field using the `/` menu:
+
+```
+/field
+```
+
+Or use the component tag:
+
+```
+<field name="userId" type="string" required />
+```
+
+## Features
+
+- **Parameter name** - Displayed in monospace font
+- **Type badge** - Shows the parameter type (string, number, etc.)
+- **Required/Optional** - Visual indicator
+- **Description** - Full markdown support for parameter description
+- **Click to edit** - All attributes editable in place
+
+## Attributes
+
+| Attribute | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `name` | string | `""` | Parameter name |
+| `type` | string | `"string"` | Parameter type |
+| `required` | boolean | `false` | Whether parameter is required |
+
+## Editing Fields
+
+In edit mode, click on any part of the field to open the editor:
+
+1. **Name** - Click the parameter name
+2. **Type** - Click the type badge
+3. **Required** - Click the required/optional badge
+4. **Description** - Click inside the description area
+
+All attributes can be edited in a single modal.
+
+## Examples
+
+### Required String Parameter
+
+```
+<field name="apiKey" type="string" required />
+```
+
+Add description:
+```
+Your API key for authentication. Get it from the dashboard.
+```
+
+### Optional Number Parameter
+
+```
+<field name="timeout" type="number" />
+```
+
+Add description:
+```
+Request timeout in milliseconds. Defaults to 5000.
+```
+
+### Boolean Parameter
+
+```
+<field name="debug" type="boolean" />
+```
+
+Add description:
+```
+Enable debug mode to see detailed logs.
+```
+
+### Object Parameter
+
+```
+<field name="options" type="object" />
+```
+
+Add description:
+```
+Configuration options:
+- `retry`: Number of retry attempts
+- `cache`: Enable response caching
+```
+
+### Array Parameter
+
+```
+<field name="tags" type="array" required />
+```
+
+Add description:
+```
+Array of tag strings to categorize the item.
+```
+
+## Visual Design
+
+### Parameter Header
+
+The header displays name, type, and required status:
+
+```typescript
+// field.tsx:268-340
+<div className="flex items-center gap-3 flex-wrap">
+  <div className="flex items-center gap-2">
+    {/* Parameter name */}
+    <code className="text-lg font-semibold text-foreground font-mono">
+      {name || "parameterName"}
+    </code>
+    
+    {/* Type badge */}
+    <span className="inline-flex items-center px-2 py-1 rounded text-xs 
+      font-medium bg-primary/10 text-primary border border-primary/20 font-mono">
+      {type}
+    </span>
+    
+    {/* Required/Optional badge */}
+    <span className={`inline-flex items-center px-2 py-1 rounded text-xs font-medium
+      ${required 
+        ? "bg-destructive/10 text-destructive border border-destructive/20" 
+        : "bg-muted text-muted-foreground border border-border"}`}>
+      {required ? "required" : "optional"}
+    </span>
+  </div>
+</div>
+```
+
+### Badge Colors
+
+- **Type badge**: Primary color with 10% background
+- **Required badge**: Destructive (red) color
+- **Optional badge**: Muted gray color
+
+## Modal Editor
+
+**Code reference:** `components/field.tsx:45-210`
+
+The field editor modal includes:
+
+```typescript
+interface FieldEditModalProps {
+  open: boolean;
+  initialName: string;
+  initialType: string;
+  initialRequired: boolean;
+  onCloseAction: () => void;
+  onSubmitAction: (values: {
+    name: string;
+    type: string;
+    required: boolean;
+  }) => void;
+  modalTitle?: string;
+}
+```
+
+Fields in the modal:
+1. **Parameter Name** - Text input with placeholder examples
+2. **Type** - Text input for type string
+3. **Required** - Checkbox
+
+## Implementation Details
+
+### Node Spec
+
+```typescript
+// field.tsx:14-42
+export const fieldNodeSpec: NodeSpec = {
+  group: "block",
+  content: "block+",
+  attrs: {
+    name: { default: "" },
+    type: { default: "string" },
+    required: { default: false },
+  },
+  selectable: true,
+  parseDOM: [
+    {
+      tag: "field",
+      getAttrs: (dom) => ({
+        name: dom.getAttribute("name") || "",
+        type: dom.getAttribute("type") || "string",
+        required: dom.getAttribute("required") === "true",
+      }),
+    },
+  ],
+}
+```
+
+### Update Handler
+
+```typescript
+// field.tsx:224-250
+const updateField = useEditorEventCallback(
+  (view, { name: newName, type: newType, required: newRequired }) => {
+    const { getPos, node } = nodeProps;
+    const pos = getPos();
+    
+    const tr = view.state.tr;
+    tr.setNodeMarkup(pos, undefined, {
+      ...node.attrs,
+      name: newName,
+      type: newType,
+      required: newRequired,
+    });
+    view.dispatch(tr);
+    setModalOpen(false);
+    setEditField(null);
+  }
+);
+```
+
+### Input Rule
+
+```typescript
+// field.tsx:353-376
+export const addFieldRule = new InputRule(
+  /^<field(?:\s+([^>]+))?(?:\s*\/>|\s*>)/,
+  (state, match, start, end) => {
+    const attrs = {
+      name: "",
+      type: "string",
+      required: false,
+    };
+    
+    if (match[1]) {
+      const nameMatch = match[1].match(/name="([^"]*)"/); 
+      if (nameMatch) attrs.name = nameMatch[1];
+      
+      const typeMatch = match[1].match(/type="([^"]*)"/); 
+      if (typeMatch) attrs.type = typeMatch[1];
+      
+      attrs.required = /required(?:=true|\s|$)/.test(match[1]);
+    }
+    
+    const field = schema.nodes.field.create(attrs, schema.nodes.paragraph.create());
+    tr.replaceRangeWith(start, end, field);
+    return tr;
+  }
+);
+```
+
+## Common Parameter Types
+
+- `string` - Text values
+- `number` - Numeric values
+- `boolean` - True/false values
+- `object` - Complex objects
+- `array` - Array values
+- `function` - Callback functions
+- `Promise<T>` - Async return types
+- Custom types - e.g., `User`, `Config`, `Options`
+
+## Styling
+
+Fields use a card-like design:
+
+```typescript
+// field.tsx:253
+<div className="border border-border bg-card rounded-lg p-4 mb-4">
+```
+
+Features:
+- Border for definition
+- Card background
+- Rounded corners
+- Padding for breathing room
+- Bottom margin for spacing
+
+## Use Cases
+
+1. **API documentation** - Document endpoint parameters
+2. **Function signatures** - Document function arguments
+3. **Configuration options** - Document config object properties
+4. **CLI tools** - Document command-line flags
+5. **SDKs** - Document method parameters

@@ -1,80 +1,274 @@
 ---
-title: "Quickstart"
-description: "Start building awesome documentation in minutes"
+title: Quick Start
+description: Get started with WebEditor and build your first rich text editor in minutes.
 ---
 
-## Get started in three steps
+# Quick Start
 
-Get your documentation site running locally and make your first customization.
+This guide will help you create a basic WebEditor instance and understand its core features.
 
-### Step 1: Set up your local environment
+## Basic Setup
 
-<AccordionGroup>
-  <Accordion icon="copy" title="Clone your docs locally">
-    During the onboarding process, you created a GitHub repository with your docs content if you didn't already have one. You can find a link to this repository in your [dashboard](https://dashboard.mintlify.com).
+<Steps>
+  <Step title="Install the package">
+    First, install WebEditor using your preferred package manager:
     
-    To clone the repository locally so that you can make and preview changes to your docs, follow the [Cloning a repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository) guide in the GitHub docs.
-  </Accordion>
-  <Accordion icon="rectangle-terminal" title="Start the preview server">
-    1. Install the Mintlify CLI: `npm i -g mint`
-    2. Navigate to your docs directory and run: `mint dev`
-    3. Open `http://localhost:3000` to see your docs live!
+    <CodeGroup>
     
-    <Tip>Your preview updates automatically as you edit files.</Tip>
-  </Accordion>
-</AccordionGroup>
-
-### Step 2: Deploy your changes
-
-<AccordionGroup>
-  <Accordion icon="github" title="Install our GitHub app">
-    Install the Mintlify GitHub app from your [dashboard](https://dashboard.mintlify.com/settings/organization/github-app).
+    ```bash npm
+    npm install @devscribe-team/webeditor
+    ```
     
-    Our GitHub app automatically deploys your changes to your docs site, so you don't need to manage deployments yourself.
-</Accordion>
-<Accordion icon="palette" title="Update your site name and colors">
-    For a first change, let's update the name and colors of your docs site.
+    ```bash yarn
+    yarn add @devscribe-team/webeditor
+    ```
+    
+    ```bash pnpm
+    pnpm add @devscribe-team/webeditor
+    ```
+    
+    </CodeGroup>
+  </Step>
+  
+  <Step title="Import the component and styles">
+    Import the `WebEditor` component and its styles in your React component:
+    
+    ```tsx
+    import { WebEditor } from "@devscribe-team/webeditor";
+    import "@devscribe-team/webeditor/styles";
+    ```
+  </Step>
+  
+  <Step title="Render the editor">
+    Add the `WebEditor` component to your JSX:
+    
+    ```tsx
+    function App() {
+      return <WebEditor />;
+    }
+    ```
+  </Step>
+</Steps>
 
-    1. Open `docs.json` in your editor.
-    2. Change the `"name"` field to your project name.
-    3. Update the `"colors"` to match your brand.
-    4. Save and see your changes instantly at `http://localhost:3000`.
+## Complete Basic Example
 
-    <Tip>Try changing the primary color to see an immediate difference!</Tip>
-  </Accordion>
-</AccordionGroup>
+Here's a complete working example:
 
-### Step 3: Go live
+```tsx
+import { WebEditor } from "@devscribe-team/webeditor";
+import "@devscribe-team/webeditor/styles";
 
-<Accordion icon="rocket" title="Publish your docs">
-  1. Commit and push your changes.
-  2. Your docs will update and be live in moments!
-</Accordion>
+function App() {
+  return <WebEditor />;
+}
 
-## Next steps
-
-Now that you have your docs running, explore these key features:
-
-<CardGroup cols={2}>
-
-<Card title="Write Content" icon="pen-to-square" href="/essentials/markdown">
-  Learn MDX syntax and start writing your documentation.
-</Card>
-
-<Card title="Customize style" icon="palette" href="/essentials/settings">
-  Make your docs match your brand perfectly.
-</Card>
-
-<Card title="Add code examples" icon="square-code" href="/essentials/code">
-  Include syntax-highlighted code blocks.
-</Card>
-
-<Card title="API documentation" icon="code" href="/api-reference/introduction">
-  Auto-generate API docs from OpenAPI specs.
-</Card>
-
-</CardGroup>
+export default App;
+```
 
 <Note>
-  **Need help?** See our [full documentation](https://mintlify.com/docs) or join our [community](https://mintlify.com/community).
+  The editor will automatically detect and apply your browser's preferred theme (light or dark mode).
 </Note>
+
+## Component Props
+
+The `WebEditor` component accepts the following props:
+
+### `value` (optional)
+
+**Type**: `string`
+
+Initial content for the editor. Can be HTML or Markdown.
+
+```tsx
+function App() {
+  const initialContent = `# Hello World\n\nThis is **bold** text.`;
+  
+  return <WebEditor value={initialContent} />;
+}
+```
+
+### `editable` (optional)
+
+**Type**: `boolean`
+
+**Default**: `true`
+
+Controls whether the editor is editable or read-only.
+
+```tsx
+function App() {
+  return <WebEditor editable={false} />;
+}
+```
+
+### `onChange` (optional)
+
+**Type**: `(doc: string) => void`
+
+Callback function that receives the editor content as HTML whenever it changes.
+
+```tsx
+function App() {
+  const handleChange = (content: string) => {
+    console.log("Editor content:", content);
+  };
+  
+  return <WebEditor onChange={handleChange} />;
+}
+```
+
+## Controlled Editor Example
+
+Here's an example of a controlled editor with state management:
+
+```tsx
+import { WebEditor } from "@devscribe-team/webeditor";
+import "@devscribe-team/webeditor/styles";
+import { useState } from "react";
+
+function App() {
+  const [content, setContent] = useState(
+    "# Welcome\n\nStart writing your content here."
+  );
+
+  return (
+    <div>
+      <WebEditor 
+        value={content} 
+        onChange={setContent}
+      />
+      
+      <div>
+        <h3>Current Content:</h3>
+        <pre>{content}</pre>
+      </div>
+    </div>
+  );
+}
+```
+
+<Warning>
+  The `onChange` callback is triggered on every transaction. For production use, consider debouncing updates if you're saving content to a backend.
+</Warning>
+
+## Using the Commands Menu
+
+WebEditor includes a powerful commands menu for inserting components and formatting text.
+
+<Steps>
+  <Step title="Trigger the menu">
+    Press `/` on an empty line or at the beginning of a paragraph to open the commands menu.
+  </Step>
+  
+  <Step title="Search components">
+    Start typing to filter available components (e.g., "card", "code", "callout").
+  </Step>
+  
+  <Step title="Select a component">
+    Use arrow keys to navigate and press `Enter` to insert the selected component.
+  </Step>
+</Steps>
+
+### Available Components
+
+WebEditor includes many built-in components:
+
+- **Cards**: Display content in card layouts
+- **Callouts**: Highlight important information
+- **Code Snippets**: Syntax-highlighted code blocks
+- **Tabs**: Organize content in tabs
+- **Accordions**: Collapsible content sections
+- **Icons**: Insert icons from Lucide
+- **Badges**: Add badge elements
+- **Frames**: Embed iframe content
+- **Mermaid**: Create diagrams with Mermaid syntax
+- And more!
+
+## Applying Text Marks
+
+You can apply marks (like bold, italic, code) to selected text:
+
+<Steps>
+  <Step title="Select text">
+    Highlight the text you want to format.
+  </Step>
+  
+  <Step title="Open marks menu">
+    Press `/` to open the marks menu.
+  </Step>
+  
+  <Step title="Choose a mark">
+    Select a mark like bold, italic, code, or tooltip to apply it to the selected text.
+  </Step>
+</Steps>
+
+## Theme Management
+
+WebEditor automatically detects and applies your browser's theme preference. You can also manually control the theme:
+
+```tsx
+import { WebEditor, useTheme } from "@devscribe-team/webeditor";
+import "@devscribe-team/webeditor/styles";
+
+function App() {
+  const { theme, resolvedTheme, setTheme } = useTheme();
+
+  return (
+    <div>
+      <div className="theme-controls">
+        <button onClick={() => setTheme("light")}>Light</button>
+        <button onClick={() => setTheme("dark")}>Dark</button>
+        <button onClick={() => setTheme("auto")}>Auto</button>
+        <span>
+          Current: {theme} (resolved: {resolvedTheme})
+        </span>
+      </div>
+      <WebEditor />
+    </div>
+  );
+}
+```
+
+### Theme Hook API
+
+The `useTheme` hook returns:
+
+```typescript
+interface UseThemeReturn {
+  theme: Theme; // 'light' | 'dark' | 'auto'
+  resolvedTheme: 'light' | 'dark'; // The actual applied theme
+  setTheme: (theme: Theme) => void; // Set the theme
+  toggleTheme: () => void; // Toggle between light -> dark -> auto
+}
+```
+
+### Theme Features
+
+- **Auto mode**: Automatically follows your system's dark/light preference
+- **Light/Dark mode**: Forces a specific theme
+- **Persistent**: Your theme choice is saved to `localStorage`
+- **Reactive**: Automatically updates when system preference changes (in auto mode)
+
+<Note>
+  The theme is stored in `localStorage` under the key `webeditor-theme` and persists across sessions.
+</Note>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Components" icon="cube" href="/components/overview">
+    Explore all available components
+  </Card>
+  
+  <Card title="Theming" icon="palette" href="/concepts/theme-system">
+    Deep dive into theme customization
+  </Card>
+  
+  <Card title="API Reference" icon="book" href="/api/webeditor">
+    View complete API documentation
+  </Card>
+  
+  <Card title="Customization" icon="code" href="/customization/custom-components">
+    Learn how to create custom components
+  </Card>
+</CardGroup>

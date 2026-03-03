@@ -1,0 +1,493 @@
+---
+title: Customizing the Marks Menu
+description: Configure text formatting options and inline styles in WebEditor
+---
+
+## Overview
+
+The marks menu provides text formatting options like bold, italic, and custom inline marks. Marks are different from blocks—they apply formatting to selected text rather than creating new structural elements.
+
+## Mark Types
+
+WebEditor supports two types of mark commands:
+
+### Simple Mark Commands
+
+Commands that toggle formatting on selected text:
+
+```typescript
+export interface SimpleMarkCommand {
+  id: string;
+  name: string;
+  description: string;
+  icon: typeof Bold;
+  execute: (state: EditorState, dispatch?: (tr: Transaction) => void) => boolean;
+}
+```
+
+### Tooltip Mark Commands
+
+Commands that require additional attributes:
+
+```typescript
+export interface TooltipMarkCommand {
+  id: string;
+  name: string;
+  description: string;
+  icon: typeof Info;
+  type: "tooltip";
+  requiresAttributes: true;
+}
+```
+
+## Default Marks
+
+Here's the complete default marks menu configuration:
+
+```typescript
+import { Bold, Italic, Strikethrough, Code, Info } from "lucide-react";
+import { EditorState, Transaction } from "prosemirror-state";
+
+export const marksMenuSetup: MarkCommandItem[] = [
+  {
+    id: "bold",
+    name: "Bold",
+    description: "Make text bold",
+    icon: Bold,
+    execute: (state, dispatch) => {
+      const { from, to } = state.selection;
+      if (from === to) return false;
+
+      if (dispatch) {
+        const mark = state.schema.marks.strong.create();
+        const tr = state.tr.addMark(from, to, mark).removeStoredMark(mark);
+        dispatch(tr);
+      }
+      return true;
+    },
+  },
+  {
+    id: "italic",
+    name: "Italic",
+    description: "Make text italic",
+    icon: Italic,
+    execute: (state, dispatch) => {
+      const { from, to } = state.selection;
+      if (from === to) return false;
+
+      if (dispatch) {
+        const mark = state.schema.marks.em.create();
+        const tr = state.tr.addMark(from, to, mark).removeStoredMark(mark);
+        dispatch(tr);
+      }
+      return true;
+    },
+  },
+  {
+    id: "strikethrough",
+    name: "Strikethrough",
+    description: "Strike through text",
+    icon: Strikethrough,
+    execute: (state, dispatch) => {
+      const { from, to } = state.selection;
+      if (from === to) return false;
+
+      if (dispatch) {
+        const mark = state.schema.marks.strikethrough.create();
+        const tr = state.tr.addMark(from, to, mark).removeStoredMark(mark);
+        dispatch(tr);
+      }
+      return true;
+    },
+  },
+  {
+    id: "code",
+    name: "Inline Code",
+    description: "Format as inline code",
+    icon: Code,
+    execute: (state, dispatch) => {
+      const { from, to } = state.selection;
+      if (from === to) return false;
+
+      if (dispatch) {
+        const mark = state.schema.marks.code.create();
+        const tr = state.tr.addMark(from, to, mark).removeStoredMark(mark);
+        dispatch(tr);
+      }
+      return true;
+    },
+  },
+  { separator: true },
+  {
+    id: "tooltip",
+    name: "Tooltip",
+    description: "Add a tooltip to the selected text",
+    icon: Info,
+    type: "tooltip",
+    requiresAttributes: true,
+  },
+];
+```
+
+## Mark Separators
+
+Add visual separators to group related marks:
+
+```typescript
+{ separator: true }
+```
+
+## Helper Functions
+
+### Filter Marks by Type
+
+```typescript
+import {
+  getSimpleMarkCommands,
+  getTooltipMarkCommands
+} from "./marks-system";
+
+const simpleMarks = getSimpleMarkCommands();
+const tooltipMarks = getTooltipMarkCommands();
+```
+
+### Search Marks
+
+```typescript
+import { filterMarkCommands } from "./marks-system";
+
+const results = filterMarkCommands("bold");
+// Returns mark commands matching "bold" in name, description, or id
+```
+
+### Type Guards
+
+```typescript
+import {
+  isSimpleMarkCommand,
+  isTooltipMarkCommand
+} from "./marks-system";
+
+if (isSimpleMarkCommand(command)) {
+  // Execute the mark toggle
+  command.execute(state, dispatch);
+} else if (isTooltipMarkCommand(command)) {
+  // Show tooltip dialog
+  showTooltipDialog();
+}
+```
+
+### Check for Text Selection
+
+```typescript
+import { hasTextSelection } from "./marks-system";
+
+if (hasTextSelection(state)) {
+  // User has selected text, marks can be applied
+}
+```
+
+## Adding Custom Marks
+
+### 1. Define the Mark in Schema
+
+First, add the mark to your ProseMirror schema:
+
+```typescript
+// In schema.ts
+const marks = mdSchema.spec.marks
+  .append({
+    highlight: {
+      attrs: {
+        color: { default: "yellow" },
+      },
+      inclusive: false,
+      parseDOM: [
+        {
+          tag: "mark",
+          getAttrs: (dom) => ({
+            color: (dom as HTMLElement).getAttribute("data-color") || "yellow",
+          }),
+        },
+      ],
+      toDOM: (mark) => [
+        "mark",
+        {
+          "data-color": mark.attrs.color,
+          class: `bg-${mark.attrs.color}-200 dark:bg-${mark.attrs.color}-800`,
+        },
+        0,
+      ],
+    },
+  });
+```
+
+### 2. Create a Simple Mark Command
+
+```typescript
+import { Highlighter } from "lucide-react";
+
+const highlightMark: SimpleMarkCommand = {
+  id: "highlight",
+  name: "Highlight",
+  description: "Highlight text",
+  icon: Highlighter,
+  execute: (state, dispatch) => {
+    const { from, to } = state.selection;
+    if (from === to) return false;
+
+    if (dispatch) {
+      const mark = state.schema.marks.highlight.create({ color: "yellow" });
+      const tr = state.tr.addMark(from, to, mark).removeStoredMark(mark);
+      dispatch(tr);
+    }
+    return true;
+  },
+};
+
+marksMenuSetup.push(highlightMark);
+```
+
+### 3. Create a Mark with Attributes
+
+```typescript
+const linkMark: TooltipMarkCommand = {
+  id: "link",
+  name: "Link",
+  description: "Add a hyperlink",
+  icon: Link,
+  type: "tooltip",
+  requiresAttributes: true,
+};
+
+marksMenuSetup.push(linkMark);
+```
+
+Then implement the execution:
+
+```typescript
+export function executeLink(
+  state: EditorState,
+  dispatch: (tr: Transaction) => void,
+  url: string,
+): boolean {
+  const { from, to } = state.selection;
+  if (from === to) return false;
+
+  const mark = state.schema.marks.link.create({ href: url });
+  const tr = state.tr.addMark(from, to, mark).removeStoredMark(mark);
+  dispatch(tr);
+  return true;
+}
+```
+
+## Tooltip Mark Implementation
+
+The tooltip mark is a special case that shows on hover:
+
+```typescript
+export function executeTooltipMark(
+  state: EditorState,
+  dispatch: (tr: Transaction) => void,
+  tooltipText: string,
+): boolean {
+  const { from, to } = state.selection;
+
+  if (from === to) return false; // No selection
+
+  const mark = state.schema.marks.tooltip_mark.create({
+    tooltip: tooltipText
+  });
+  const tr = state.tr.addMark(from, to, mark).removeStoredMark(mark);
+  dispatch(tr);
+  return true;
+}
+```
+
+The tooltip mark schema:
+
+```typescript
+tooltip_mark: {
+  attrs: {
+    tooltip: { default: "" },
+  },
+  inclusive: false,
+  parseDOM: [
+    {
+      tag: "span[data-tooltip]",
+      getAttrs: (dom) => ({
+        tooltip: (dom as HTMLElement).getAttribute("data-tooltip") || "",
+      }),
+    },
+  ],
+  toDOM: (mark) => [
+    "span",
+    {
+      "data-tooltip": mark.attrs.tooltip,
+      class: "underline decoration-dotted decoration-muted-foreground cursor-help hover:decoration-foreground transition-colors relative group",
+    },
+    0,
+  ],
+}
+```
+
+## Keyboard Shortcuts
+
+Add keyboard shortcuts for marks:
+
+```typescript
+import { keymap } from "prosemirror-keymap";
+
+const markKeymaps = keymap({
+  "Mod-b": (state, dispatch) => {
+    // Bold
+    const mark = state.schema.marks.strong.create();
+    const { from, to } = state.selection;
+    if (dispatch) {
+      dispatch(state.tr.addMark(from, to, mark));
+    }
+    return true;
+  },
+  "Mod-i": (state, dispatch) => {
+    // Italic
+    const mark = state.schema.marks.em.create();
+    const { from, to } = state.selection;
+    if (dispatch) {
+      dispatch(state.tr.addMark(from, to, mark));
+    }
+    return true;
+  },
+  "Mod-`": (state, dispatch) => {
+    // Inline code
+    const mark = state.schema.marks.code.create();
+    const { from, to } = state.selection;
+    if (dispatch) {
+      dispatch(state.tr.addMark(from, to, mark));
+    }
+    return true;
+  },
+});
+```
+
+## Styling Marks
+
+Marks use CSS classes for styling:
+
+```css
+/* Bold */
+strong {
+  font-weight: 600;
+}
+
+/* Italic */
+em {
+  font-style: italic;
+}
+
+/* Strikethrough */
+s {
+  text-decoration: line-through;
+}
+
+/* Inline code */
+code {
+  background: var(--muted);
+  color: var(--foreground);
+  padding: 0.125rem 0.25rem;
+  border-radius: 0.25rem;
+  font-family: var(--font-mono);
+  font-size: 0.875em;
+}
+
+/* Tooltip */
+span[data-tooltip] {
+  text-decoration: underline;
+  text-decoration-style: dotted;
+  cursor: help;
+}
+
+span[data-tooltip]:hover {
+  text-decoration-color: var(--foreground);
+}
+```
+
+## Mark Validation
+
+Validate mark application:
+
+```typescript
+function canApplyMark(
+  state: EditorState,
+  markType: MarkType
+): boolean {
+  const { from, to } = state.selection;
+  
+  // No selection
+  if (from === to) return false;
+  
+  // Check if mark can be applied to selection
+  let canApply = true;
+  state.doc.nodesBetween(from, to, (node) => {
+    if (!node.type.allowsMarkType(markType)) {
+      canApply = false;
+      return false;
+    }
+  });
+  
+  return canApply;
+}
+```
+
+## Toggle Marks
+
+Implement mark toggling (remove if already applied):
+
+```typescript
+function toggleMark(
+  state: EditorState,
+  dispatch: (tr: Transaction) => void,
+  markType: MarkType
+): boolean {
+  const { from, to } = state.selection;
+  if (from === to) return false;
+
+  const hasMark = state.doc.rangeHasMark(from, to, markType);
+  
+  if (dispatch) {
+    if (hasMark) {
+      // Remove mark
+      dispatch(state.tr.removeMark(from, to, markType));
+    } else {
+      // Add mark
+      const mark = markType.create();
+      dispatch(state.tr.addMark(from, to, mark));
+    }
+  }
+  
+  return true;
+}
+```
+
+## Best Practices
+
+<Card title="Mark Guidelines" icon="Lightbulb">
+  - Always check for text selection before applying marks
+  - Use `removeStoredMark` to prevent marks from continuing after the selection
+  - Provide keyboard shortcuts for frequently used marks
+  - Use semantic mark names (e.g., `strong` instead of `bold`)
+  - Validate mark compatibility with node types
+</Card>
+
+<Callout type="warning">
+  Marks can only be applied to selected text. The execute function should return `false` if there's no selection.
+</Callout>
+
+<Callout type="tip">
+  Use `inclusive: false` for marks that should not expand when typing at their boundaries.
+</Callout>
+
+## Next Steps
+
+- Learn about [custom components](/customization/custom-components)
+- Explore [styling options](/customization/styling) for marks
+- Configure the [commands menu](/customization/commands-menu)

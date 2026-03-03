@@ -1,0 +1,278 @@
+---
+title: Icons
+description: Insert icons from the Lucide icon library
+---
+
+Icons are inline components that display icons from the Lucide icon library with customizable sizes.
+
+## Usage
+
+Insert an icon using the `/` menu:
+
+```
+/icon
+```
+
+Or use the component tag:
+
+```
+<icon name="FileText" size="20" />
+```
+
+## Features
+
+- **Lucide icons** - Access to the entire Lucide icon library
+- **Customizable size** - Set icon size in pixels
+- **Dynamic loading** - Icons load on-demand from Lucide
+- **Automatic normalization** - Icon names auto-convert to PascalCase
+- **Inline display** - Use icons within text
+
+## Attributes
+
+| Attribute | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `name` | string | `"FileText"` | Lucide icon name (e.g., `"Star"`, `"Heart"`, `"Book"`) |
+| `size` | number | `20` | Icon size in pixels |
+
+## Common Icon Sizes
+
+- **16px** - Small icons for tight spaces
+- **20px** - Default, good for inline use
+- **24px** - Medium icons for emphasis
+- **32px** - Large icons for headers
+- **48px+** - Extra large for hero sections
+
+## Editing Icons
+
+In edit mode:
+
+1. Click the icon to open the editor
+2. Enter a new icon name
+3. Adjust the size in pixels
+4. Icons update in real-time
+
+## Examples
+
+### Basic Icon
+
+```
+<icon name="Star" size="20" />
+```
+
+### Large Icon
+
+```
+<icon name="Rocket" size="32" />
+```
+
+### Inline Usage
+
+```
+Click the <icon name="Settings" size="16" /> icon to configure.
+```
+
+### Icon Names
+
+Use any icon from [Lucide Icons](https://lucide.dev/icons/):
+
+```
+<icon name="Heart" />
+<icon name="ThumbsUp" />
+<icon name="CheckCircle" />
+<icon name="AlertTriangle" />
+<icon name="Download" />
+<icon name="Upload" />
+<icon name="Search" />
+<icon name="Menu" />
+```
+
+## Icon Name Formats
+
+Icons support multiple name formats:
+
+- **PascalCase**: `FileText`, `ArrowRight`
+- **kebab-case**: `file-text`, `arrow-right`
+- **snake_case**: `file_text`, `arrow_right`
+- **camelCase**: `fileText`, `arrowRight`
+
+All formats are automatically normalized to PascalCase.
+
+## Implementation Details
+
+### Node Spec
+
+```typescript
+// icon.tsx:13-40
+export const iconNodeSpec: NodeSpec = {
+  group: "inline",
+  inline: true,
+  atom: true,
+  selectable: false,
+  attrs: {
+    name: { default: "FileText" },
+    size: { default: 20 },
+  },
+  parseDOM: [
+    {
+      tag: "icon",
+      getAttrs: (dom) => ({
+        name: dom.getAttribute("name") || "FileText",
+        size: parseInt(dom.getAttribute("size") || "20"),
+      }),
+    },
+  ],
+}
+```
+
+### Dynamic Icon Loading
+
+Icons use the same dynamic loading system as cards:
+
+**Code reference:** `components/icon.tsx:75-79`
+
+```typescript
+const iconElement = resolveInlineIcon(name, {
+  size: size,
+  showIcon: true,
+  fallbackIcon: DEFAULT_CARD_ICON,
+});
+```
+
+From `components/card.tsx`:
+
+```typescript
+// card.tsx:183-216
+export function resolveInlineIcon(
+  icon: ReactNode | CardIconName | undefined,
+  options: {
+    size?: string | number;
+    showIcon?: boolean;
+    fallbackIcon?: string;
+  } = {},
+): ReactNode {
+  const { size = 20, showIcon = true, fallbackIcon = DEFAULT_CARD_ICON } = options;
+  
+  if (!showIcon) return null;
+  
+  const sizeClass = typeof size === "number" ? `w-[${size}px] h-[${size}px]` : size;
+  const sizeStyle = typeof size === "number" ? { width: `${size}px`, height: `${size}px` } : {};
+  
+  if (typeof icon === "string") {
+    return <DynamicIcon iconName={icon} size={sizeClass} fallbackIcon={fallbackIcon} />;
+  }
+  
+  if (icon) {
+    return (
+      <span className={`${sizeClass} text-muted-foreground`} style={sizeStyle}>
+        {icon}
+      </span>
+    );
+  }
+  
+  const pixelSize = typeof size === "number" ? size : 20;
+  return <FileText className="text-muted-foreground" width={pixelSize} height={pixelSize} />;
+}
+```
+
+### Icon Editor Modal
+
+**Code reference:** `components/icon.tsx:52-73`
+
+```typescript
+const updateIcon = useEditorEventCallback(
+  (view, { icon: newIcon, size: newSize }) => {
+    const { getPos, node } = nodeProps;
+    const pos = getPos();
+    
+    const tr = view.state.tr;
+    tr.setNodeMarkup(pos, undefined, {
+      ...node.attrs,
+      name: newIcon,
+      size: newSize ?? node.attrs.size,
+    });
+    view.dispatch(tr);
+    setModalOpen(false);
+  }
+);
+```
+
+### Input Rule
+
+```typescript
+// icon.tsx:129-154
+export const addIconRule = new InputRule(
+  /^<icon(?:\s+([^>]+))?(?:\s*\/>|\s*>)/,
+  (state, match, start, end) => {
+    const attrs = {
+      name: "FileText",
+      size: 20,
+    };
+    
+    if (match[1]) {
+      const nameMatch = match[1].match(/name="([^"]*)"/); 
+      if (nameMatch) attrs.name = nameMatch[1];
+      
+      const sizeMatch = match[1].match(/size="([^"]*)"/); 
+      if (sizeMatch) attrs.size = parseInt(sizeMatch[1]) || 20;
+    }
+    
+    const iconNode = schema.nodes.icon.create(attrs);
+    tr.replaceRangeWith(start, end, iconNode);
+    
+    // Place selection after the icon
+    tr.setSelection(Selection.near(tr.doc.resolve(start + iconNode.nodeSize)));
+    
+    return tr;
+  }
+);
+```
+
+### Fallback Behavior
+
+If an icon name is not found:
+
+1. A warning is logged to console
+2. The default `FileText` icon is displayed
+3. No error breaks the editor
+
+**Code reference:** `components/card.tsx:60-62`
+
+```typescript
+if (IconComponent) {
+  iconCache.set(normalizedName, IconComponent);
+  return IconComponent;
+} else {
+  console.warn(`Icon "${iconName}" not found in Lucide icons.`);
+  return null;
+}
+```
+
+## Styling
+
+Icons use:
+
+```typescript
+// icon.tsx:96-122
+<span
+  className={`inline-flex items-center justify-center text-muted-foreground 
+    ${editable ? "cursor-pointer hover:text-foreground transition-colors" : ""}`}
+  style={{ width: `${size}px`, height: `${size}px` }}
+>
+  {iconElement}
+</span>
+```
+
+Features:
+- Muted foreground color
+- Hover effect in edit mode (darker color)
+- Smooth transitions
+- Inline-flex for proper alignment
+
+## Use Cases
+
+1. **Inline documentation** - Add icons to text for visual cues
+2. **Feature lists** - Prefix items with icons
+3. **UI mockups** - Show UI elements with icons
+4. **Navigation** - Illustrate navigation items
+5. **Status indicators** - Visual status markers
+6. **Decorative elements** - Enhance visual appeal

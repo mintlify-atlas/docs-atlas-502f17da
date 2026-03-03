@@ -1,0 +1,326 @@
+---
+title: Understanding the WebEditor Component
+description: Learn how to create and configure WebEditor instances
+---
+
+The `WebEditor` component is the main entry point for creating rich text editors in your React application.
+
+## Basic Usage
+
+The simplest way to use WebEditor is to render it without any props:
+
+```tsx
+import { WebEditor } from "@devscribe-team/webeditor";
+import "@devscribe-team/webeditor/styles";
+
+function App() {
+  return <WebEditor />;
+}
+```
+
+<Warning>
+Don't forget to import the styles! The editor requires CSS for proper rendering.
+</Warning>
+
+## Component Props
+
+The WebEditor component accepts three optional props:
+
+```typescript
+interface WebEditorProps {
+  value?: string;        // Initial content (Markdown/MDX format)
+  editable?: boolean;    // Whether the editor is editable (default: true)
+  onChange?: (doc: string) => void;  // Callback when content changes
+}
+```
+
+### The `value` Prop
+
+Use the `value` prop to initialize the editor with content:
+
+```tsx
+const initialContent = `
+---
+title: My Document
+---
+
+# Hello World
+
+This is a **bold** statement.
+
+<Card title="Welcome" icon="Sparkles">
+  This is a custom card component!
+</Card>
+`;
+
+function App() {
+  return <WebEditor value={initialContent} />;
+}
+```
+
+<Info>
+The editor automatically strips frontmatter (YAML between `---` markers) when processing the content.
+</Info>
+
+### The `editable` Prop
+
+Control whether users can edit the content:
+
+```tsx
+function ReadOnlyViewer({ content }: { content: string }) {
+  return <WebEditor value={content} editable={false} />;
+}
+```
+
+When `editable={false}`:
+- Users cannot type or modify content
+- Interactive UI elements (edit buttons, modals) are hidden
+- The command hint (`Press '/' for commands`) doesn't appear
+
+### The `onChange` Prop
+
+Receive updates whenever the document changes:
+
+```tsx
+function ControlledEditor() {
+  const [content, setContent] = useState("");
+  
+  return (
+    <WebEditor
+      value={content}
+      onChange={(newContent) => {
+        setContent(newContent);
+        console.log("Document updated:", newContent);
+      }}
+    />
+  );
+}
+```
+
+<Warning>
+The `onChange` callback is called on **every transaction**, which can be frequent. Consider debouncing if you're saving to a backend.
+</Warning>
+
+## Internal Architecture
+
+Here's how the WebEditor component is structured:
+
+### State Management
+
+```tsx
+export function WebEditor(props: { value?: string; editable?: boolean; onChange?: (doc: string) => void }) {
+  // Theme detection
+  const { theme, resolvedTheme } = useTheme();
+  
+  // Editor state (ProseMirror)
+  const [editorState, setEditorState] = useState<EditorState | null>(null);
+  
+  // Command menu state
+  const [commandMenuQuery, setCommandMenuQuery] = useState("");
+  const [dialogSelectedIdx, setDialogSelectedIdx] = useState(0);
+  
+  // Modal states for editing components
+  const [tooltipPromptOpen, setTooltipPromptOpen] = useState(false);
+  const [attributePromptOpen, setAttributePromptOpen] = useState(false);
+  
+  // ... more state
+}
+```
+
+### Plugin System
+
+WebEditor configures ProseMirror with several plugins:
+
+```tsx
+const plugins = useMemo(
+  () => [
+    reactKeys(),                    // React-ProseMirror integration
+    createTooltipClickPlugin(),     // Click handlers for tooltip marks
+    keymapPlugin({                  // Keyboard shortcuts
+      "Mod-z": undo,
+      "Mod-r": redo,
+      "/": (state, _dispatch, view) => {
+        // Open command/marks menu
+      },
+    }),
+    history(),                      // Undo/redo history
+    inputPlugin(),                  // Markdown input rules
+    customPastePlugin(),            // Handle paste events
+    keymap(baseKeymap),             // Basic editing commands
+  ],
+  [],
+);
+```
+
+### Document Initialization
+
+The editor initializes its document when the `value` prop changes:
+
+```tsx
+useEffect(() => {
+  if (props.value !== undefined) {
+    // Convert Markdown/MDX to ProseMirror document
+    const fragment = props.value.length > 0 
+      ? mdxLikeToProseMirror(props.value) 
+      : Fragment.empty;
+    
+    const topNode = schema.topNodeType.create(null, fragment);
+    
+    const newState = EditorState.create({
+      schema,
+      doc: topNode,
+      plugins,
+    });
+    
+    setEditorState(newState);
+  }
+}, [props.value, plugins]);
+```
+
+<Info>
+Changing the `value` prop will **replace** the entire document. Use the `onChange` callback pattern for controlled editing.
+</Info>
+
+## Command System
+
+WebEditor includes two command menus:
+
+### Component Menu (Empty Line)
+
+Press `/` in an empty paragraph to insert components:
+
+```tsx
+keymapPlugin({
+  "/": (state, _dispatch, view) => {
+    const { $head, empty } = state.selection;
+    
+    if (empty && $head.parent.type.name === "paragraph") {
+      const isEmptyParagraph = $head.parent.content.size === 0;
+      
+      if (isEmptyParagraph) {
+        setCurrentMenuType("commands");
+        openDialog();
+        return true;
+      }
+    }
+    
+    return false;
+  },
+})
+```
+
+### Marks Menu (Text Selection)
+
+Press `/` with text selected to apply marks:
+
+```tsx
+if (!empty && hasTextSelection(state)) {
+  setCurrentMenuType("marks");
+  openMarksDialog();
+  return true;
+}
+```
+
+## Rendering Pipeline
+
+WebEditor renders components through NodeViews:
+
+```tsx
+<ProseMirror
+  state={editorState}
+  dispatchTransaction={(tr) => {
+    const newState = editorState.apply(tr);
+    setEditorState(newState);
+    
+    // Serialize and call onChange
+    props.onChange?.(proseMirrorToHTML(newState.doc));
+  }}
+  nodeViews={{
+    card: CardNodeView,
+    tabs: TabsNodeView,
+    callout: CalloutNodeView,
+    code_snippet: CodeSnippetNodeView,
+    // ... more components
+  }}
+>
+  <ProseMirrorDoc />
+</ProseMirror>
+```
+
+Each NodeView is a React component that:
+1. Receives the ProseMirror node as props
+2. Renders custom UI
+3. Dispatches transactions to update the document
+
+## Editor Context
+
+The editor provides an `editable` context to all child components:
+
+```tsx
+<EditorEditableProvider editable={props.editable ?? true}>
+  {/* Editor content */}
+</EditorEditableProvider>
+```
+
+Components use this context to conditionally show edit controls:
+
+```tsx
+const editable = useEditorEditable();
+
+{editable && (
+  <button onClick={openEditModal}>
+    Edit
+  </button>
+)}
+```
+
+## Performance Considerations
+
+<Accordion title="Why does onChange fire so frequently?">
+The `onChange` callback is invoked on every ProseMirror transaction. This includes:
+- Typing a single character
+- Cursor movements (in some cases)
+- Programmatic updates
+
+To optimize, debounce your save logic:
+
+```tsx
+const debouncedSave = useMemo(
+  () => debounce((content: string) => {
+    saveToBackend(content);
+  }, 1000),
+  []
+);
+
+<WebEditor onChange={debouncedSave} />
+```
+</Accordion>
+
+<Accordion title="Why re-initialize on value change?">
+The `value` prop is treated as the source of truth. When it changes, the entire document is replaced. This is by design to support:
+- Loading different documents
+- External updates
+- Collaborative editing scenarios
+
+For local editing, use the `onChange` pattern instead of changing `value`.
+</Accordion>
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Markdown & JSX" href="/concepts/markdown-jsx">
+    Learn how to write content with Markdown and JSX
+  </Card>
+  
+  <Card title="Theme System" href="/concepts/theme-system">
+    Configure light and dark modes
+  </Card>
+  
+  <Card title="Custom Components" href="/components/overview">
+    Explore available components
+  </Card>
+  
+  <Card title="API Reference" href="/api/webeditor">
+    Complete API documentation
+  </Card>
+</CardGroup>

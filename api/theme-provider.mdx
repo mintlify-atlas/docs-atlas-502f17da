@@ -1,0 +1,107 @@
+---
+title: Theme Provider
+description: Theme management for WebEditor
+---
+
+## Theme Provider
+
+WebEditor handles theming internally and does not require a separate theme provider component.
+
+### Built-in Theme Management
+
+The WebEditor component automatically:
+
+1. Detects the user's system theme preference using `window.matchMedia('(prefers-color-scheme: dark)')`
+2. Applies the appropriate theme class (`.dark` or `.light`) to `document.documentElement`
+3. Persists theme preferences to `localStorage`
+4. Responds to system theme changes in real-time
+
+### Using the Theme System
+
+Instead of a provider component, use the `useTheme` hook directly in your components:
+
+```tsx
+import { useTheme } from '@devscribe-team/webeditor';
+
+function ThemeToggle() {
+  const { theme, resolvedTheme, setTheme, toggleTheme } = useTheme();
+
+  return (
+    <button onClick={toggleTheme}>
+      Current theme: {resolvedTheme}
+    </button>
+  );
+}
+```
+
+### How It Works
+
+The theme system is initialized automatically when you use the `WebEditor` component:
+
+```tsx
+import { WebEditor } from '@devscribe-team/webeditor';
+import '@devscribe-team/webeditor/styles';
+
+function App() {
+  return (
+    <div>
+      <WebEditor value="# Hello" />
+      {/* Theme is automatically managed */}
+    </div>
+  );
+}
+```
+
+Internally, the WebEditor component calls `useTheme()` which:
+- Reads the saved preference from `localStorage` (key: `webeditor-theme`)
+- Falls back to `'auto'` mode if no preference is saved
+- Listens for system theme changes
+- Updates the document root with the appropriate class
+
+### Multiple Editors
+
+If you have multiple WebEditor instances on the same page, they all share the same theme state through localStorage and the document root classes. There's no need for a provider to coordinate between them.
+
+### Custom Theme Integration
+
+If your application has its own theme system, you can:
+
+1. Use the `useTheme` hook to synchronize with WebEditor's theme
+2. Manually set the theme using `setTheme()`
+3. Monitor `resolvedTheme` to apply your own theme classes
+
+```tsx
+import { useTheme } from '@devscribe-team/webeditor';
+import { useEffect } from 'react';
+
+function ThemedApp() {
+  const { resolvedTheme, setTheme } = useTheme();
+  
+  // Synchronize with your app's theme system
+  useEffect(() => {
+    // Your custom theme logic
+    document.body.setAttribute('data-theme', resolvedTheme);
+  }, [resolvedTheme]);
+
+  return (
+    <div>
+      {/* Your app content */}
+    </div>
+  );
+}
+```
+
+### SSR Considerations
+
+The theme system gracefully handles server-side rendering:
+- Returns `'auto'` as the default theme on the server
+- Returns `'light'` as the default resolved theme on the server
+- Hydrates with the correct theme on the client
+- Uses feature detection for `window`, `localStorage`, and `matchMedia`
+
+No additional provider or configuration is needed for SSR compatibility.
+
+## See Also
+
+- [useTheme Hook](/api/use-theme) - Complete API reference for theme management
+- [WebEditor](/api/webeditor) - Main editor component documentation

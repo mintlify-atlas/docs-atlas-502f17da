@@ -1,0 +1,228 @@
+---
+title: Accordions
+description: Collapsible sections with titles and descriptions
+---
+
+Accordions create collapsible sections that users can expand or collapse to show or hide content.
+
+## Usage
+
+Insert an accordion using the `/` menu:
+
+```
+/accordion
+```
+
+Or use the component tag:
+
+```
+<accordion title="Accordion Title" />
+```
+
+## Features
+
+- **Collapsible content** - Click to expand/collapse
+- **Title and description** - Support for both heading and subtitle text
+- **Optional icons** - Add icons from Lucide library
+- **Default state** - Can be open or closed by default
+- **Smooth transitions** - Animated expand/collapse
+
+## Attributes
+
+| Attribute | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `title` | string | `""` | The accordion title (heading) |
+| `description` | string | `""` | Optional description text |
+| `icon` | string | `null` | Optional Lucide icon name |
+| `showIcon` | boolean | `true` | Whether to display the icon |
+| `defaultOpen` | boolean | `false` | Whether accordion starts open |
+
+## Editing Accordions
+
+In edit mode:
+
+1. **Edit title:** Click the title to open the title editor
+2. **Edit description:** Click the description to open the description editor
+3. **Edit content:** Click inside the accordion to edit the content
+4. **Change icon:** Use the icon editor (when implemented)
+
+## Examples
+
+### Basic Accordion
+
+```
+<accordion title="Click to expand" />
+```
+
+### Accordion with Description
+
+```
+<accordion 
+  title="Advanced Settings"
+  description="Configure advanced options"
+/>
+```
+
+### Accordion with Icon
+
+```
+<accordion 
+  title="Quick Start Guide"
+  icon="Book"
+/>
+```
+
+### Open by Default
+
+```
+<accordion 
+  title="Important Information"
+  defaultOpen={true}
+/>
+```
+
+### Accordion without Icon
+
+```
+<accordion 
+  title="Simple Accordion"
+  showIcon={false}
+/>
+```
+
+## Content Types
+
+Accordions can contain any block content:
+
+- Paragraphs
+- Lists
+- Code snippets
+- Other components (cards, callouts, etc.)
+- Images and media
+
+## Accessibility
+
+Accordions include proper ARIA attributes:
+
+- `aria-expanded` - Indicates open/closed state
+- `aria-controls` - Links button to content area
+- Keyboard navigation support
+- Focus management
+
+## Implementation Details
+
+### Node Spec
+
+```typescript
+// accordion.tsx:16-50
+export const accordionNodeSpec: NodeSpec = {
+  group: "block",
+  content: "block+",
+  attrs: {
+    title: { default: "" },
+    description: { default: "" },
+    icon: { default: null },
+    showIcon: { default: true },
+    defaultOpen: { default: false },
+  },
+  selectable: true,
+  parseDOM: [
+    {
+      tag: "accordion",
+      getAttrs: (dom) => ({
+        title: dom.getAttribute("title") || "",
+        description: dom.getAttribute("description") || "",
+        icon: dom.getAttribute("icon") || null,
+        showIcon: dom.getAttribute("show-icon") !== "false",
+        defaultOpen: dom.getAttribute("default-open") === "true",
+      }),
+    },
+  ],
+}
+```
+
+### State Management
+
+```typescript
+// accordion.tsx:69
+const [isOpen, setIsOpen] = useState(nodeProps.node.attrs.defaultOpen ?? false);
+```
+
+### Toggle Behavior
+
+```typescript
+// accordion.tsx:163-171
+<button
+  onClick={() => setIsOpen((open) => !open)}
+  className={`w-full px-4 py-4 text-left flex items-center justify-between 
+    hover:bg-accent transition-colors ${isOpen ? "rounded-t-lg" : "rounded-lg"}`}
+  aria-expanded={isOpen}
+  aria-controls={`accordion-content-${title.replace(/\s+/g, "-").toLowerCase()}`}
+>
+  {/* Title, icon, and chevron */}
+</button>
+```
+
+### Chevron Animation
+
+```typescript
+// accordion.tsx:199-201
+<ChevronDown
+  className={`w-5 h-5 transition-transform duration-200 
+    ${isOpen ? "rotate-180" : ""}`}
+/>
+```
+
+### Input Rule
+
+```typescript
+// accordion.tsx:242-271
+export const addAccordionRule = new InputRule(
+  /^<accordion(?:\s+([^>]+))?(?:\s*\/>|\s*>)/,
+  (state, match, start, end) => {
+    const attrs = {
+      title: "",
+      description: "",
+      icon: null,
+      showIcon: true,
+      defaultOpen: false,
+    };
+    
+    if (match[1]) {
+      const titleMatch = match[1].match(/title="([^"]*)"/); 
+      if (titleMatch) attrs.title = titleMatch[1];
+      
+      const descMatch = match[1].match(/description="([^"]*)"/); 
+      if (descMatch) attrs.description = descMatch[1];
+      
+      // Parse other attributes...
+    }
+    
+    const accordion = schema.nodes.accordion.create(
+      attrs,
+      schema.nodes.paragraph.create()
+    );
+    
+    tr.replaceRangeWith(start, end, accordion);
+    return tr;
+  }
+);
+```
+
+## Styling
+
+Accordions feature:
+
+- Border and shadow for card-like appearance
+- Hover effects on the header
+- Smooth chevron rotation (200ms)
+- Conditional rounded corners (top-only when open)
+- Optional description styling
+
+## Use Cases
+
+1. **FAQ sections** - Collapsible question/answer pairs
+2. **Documentation** - Hide detailed implementation notes
+3. **Settings panels** - Organize configuration options
+4. **Content organization** - Group related information
+5. **Progressive disclosure** - Show information on demand

@@ -1,0 +1,362 @@
+---
+title: Styling the Editor
+description: Customize the appearance of WebEditor with themes, CSS variables, and Tailwind classes
+---
+
+## Overview
+
+WebEditor uses a combination of CSS variables, Tailwind CSS, and theme tokens to provide a consistent, customizable design system. The editor supports light and dark modes out of the box.
+
+## CSS Variables
+
+WebEditor's color system is built on CSS variables defined in `styles.css`. These variables use the OKLCH color space for better color consistency.
+
+### Core Color Tokens
+
+```css
+:root {
+  --radius: 0.625rem;
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.145 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0.145 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.145 0 0);
+  --primary: oklch(0.205 0 0);
+  --primary-foreground: oklch(0.985 0 0);
+  --secondary: oklch(0.97 0 0);
+  --secondary-foreground: oklch(0.205 0 0);
+  --muted: oklch(0.97 0 0);
+  --muted-foreground: oklch(0.556 0 0);
+  --accent: oklch(0.97 0 0);
+  --accent-foreground: oklch(0.205 0 0);
+  --destructive: oklch(0.577 0.245 27.325);
+  --border: oklch(0.922 0 0);
+  --input: oklch(0.922 0 0);
+  --ring: oklch(0.708 0 0);
+}
+```
+
+### Dark Mode
+
+```css
+.dark {
+  --background: oklch(0.145 0 0);
+  --foreground: oklch(0.985 0 0);
+  --card: oklch(0.205 0 0);
+  --card-foreground: oklch(0.985 0 0);
+  --primary: oklch(0.922 0 0);
+  --primary-foreground: oklch(0.205 0 0);
+  --border: oklch(1 0 0 / 10%);
+  --input: oklch(1 0 0 / 15%);
+  /* ... */
+}
+```
+
+### Tailwind Integration
+
+CSS variables are mapped to Tailwind colors:
+
+```css
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-border: var(--border);
+  /* ... */
+}
+```
+
+## Component Styling
+
+### Using Tailwind Classes
+
+All components use Tailwind utility classes for styling:
+
+```tsx
+<div className="border border-border bg-card shadow-sm rounded-lg">
+  <h6 className="text-card-foreground text-lg font-semibold">
+    Card Title
+  </h6>
+</div>
+```
+
+### Color Classes
+
+| Token | Usage |
+|-------|-------|
+| `bg-background` | Main background |
+| `text-foreground` | Primary text |
+| `bg-card` | Card backgrounds |
+| `text-card-foreground` | Card text |
+| `bg-primary` | Primary buttons |
+| `text-primary-foreground` | Primary button text |
+| `bg-secondary` | Secondary elements |
+| `text-muted-foreground` | Muted/secondary text |
+| `border-border` | Borders |
+| `bg-accent` | Accent backgrounds |
+| `text-destructive` | Error states |
+
+### Border Radius
+
+The editor uses a consistent border radius system:
+
+```css
+--radius-sm: calc(var(--radius) - 4px);
+--radius-md: calc(var(--radius) - 2px);
+--radius-lg: var(--radius);
+--radius-xl: calc(var(--radius) + 4px);
+```
+
+## Code Snippet Styling
+
+WebEditor uses CodeMirror with custom themes. Available themes:
+
+- `tokyoNight` (default)
+- `githubDark`
+- `githubLight`
+- `vscodeDark`
+- `vscodeLight`
+
+### Line Numbers
+
+```css
+.line-numbers-wrapper pre.line-numbers {
+  padding-left: 3.5em !important;
+  position: relative;
+  counter-reset: line;
+}
+
+.line-numbers-wrapper pre.line-numbers .line::before {
+  content: counter(line);
+  position: absolute;
+  left: -3.5em;
+  width: 3em;
+  text-align: right;
+  color: theme("colors.muted.foreground");
+  border-right: 1px solid theme("colors.border");
+}
+```
+
+### Highlighted Lines
+
+```css
+.line.highlighted {
+  background-color: rgba(34, 197, 94, 0.1) !important;
+  border-left: 2px solid rgba(34, 197, 94, 0.6) !important;
+}
+
+.dark .line.highlighted {
+  background-color: rgba(34, 197, 94, 0.15) !important;
+  border-left-color: rgba(34, 197, 94, 0.8) !important;
+}
+```
+
+## Callout Styling
+
+Callouts use type-specific colors:
+
+```typescript
+const typeInformation = {
+  info: {
+    iconColor: "text-blue-600",
+    backgroundColor: "bg-blue-500/10",
+    borderColor: "border-blue-500/20",
+  },
+  warning: {
+    iconColor: "text-yellow-600",
+    backgroundColor: "bg-yellow-500/10",
+    borderColor: "border-yellow-500/20",
+  },
+  caution: {
+    iconColor: "text-red-600",
+    backgroundColor: "bg-red-500/10",
+    borderColor: "border-red-500/20",
+  },
+  important: {
+    iconColor: "text-violet-600",
+    backgroundColor: "bg-violet-500/10",
+    borderColor: "border-violet-500/20",
+  },
+  tip: {
+    iconColor: "text-green-600",
+    backgroundColor: "bg-green-500/10",
+    borderColor: "border-green-500/20",
+  },
+};
+```
+
+## Custom Utilities
+
+### Container
+
+```css
+@utility container {
+  margin-inline: auto;
+  padding-inline: 1rem;
+  max-width: 1400px;
+  @media (width >= theme(--breakpoint-sm)) {
+    padding-inline: 2rem;
+  }
+}
+```
+
+### Responsive Heights
+
+```css
+.min-h-screen {
+  min-height: 100vh;
+  min-height: 100dvh;
+}
+
+.h-screen {
+  height: 100vh;
+  height: 100dvh;
+}
+```
+
+### Animated Gradient Text
+
+```css
+.text-animated-gradient {
+  background-image: linear-gradient(
+    90deg,
+    var(--brand),
+    #ffffff,
+    var(--brand)
+  );
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: text-gradient-shimmer 6s linear infinite;
+}
+
+@keyframes text-gradient-shimmer {
+  0% { background-position: 0% 50%; }
+  100% { background-position: 200% 50%; }
+}
+```
+
+### Diagonal Lines Background
+
+```css
+.bg-diagonal-lines {
+  background-image: repeating-linear-gradient(
+    -45deg,
+    var(--background),
+    var(--border) 1px,
+    var(--background) 1px,
+    var(--background) 8px
+  );
+}
+```
+
+## Theme Scopes
+
+WebEditor supports theme scoping for different parts of your application:
+
+### Landing Page Theme
+
+```css
+.landing {
+  --background: oklch(1 0 0);
+  --foreground: oklch(0.145 0 0);
+  /* ... custom theme tokens ... */
+}
+
+.dark .landing {
+  --background: oklch(0.145 0 0);
+  --foreground: oklch(0.985 0 0);
+  /* ... dark mode overrides ... */
+}
+```
+
+### Auth Theme
+
+```css
+.dark .auth-theme {
+  --card: oklch(0.145 0 0);
+  --border: oklch(0.269 0 0);
+  /* ... auth-specific tokens ... */
+}
+```
+
+## Customizing Component Styles
+
+### Override Component Defaults
+
+Create a custom CSS file to override component styles:
+
+```css
+/* custom-editor.css */
+.card-component {
+  --card-bg: oklch(0.98 0 0);
+  --card-border: oklch(0.85 0 0);
+}
+
+.card-component {
+  background: var(--card-bg);
+  border-color: var(--card-border);
+}
+```
+
+### Dynamic Styling in Components
+
+```tsx
+const getCardClasses = (horizontal: boolean, isClickable: boolean) => {
+  const baseClasses = `
+    border border-border bg-card shadow-sm rounded-lg
+  `;
+
+  const hoverClasses = isClickable
+    ? `cursor-pointer transition-transform duration-300
+       hover:shadow-lg hover:scale-[1.01]
+       hover:border-primary/50`
+    : "";
+
+  return `${baseClasses} ${hoverClasses}`;
+};
+```
+
+## Brand Colors
+
+Define your brand color:
+
+```css
+:root {
+  --brand: #6699cc;
+  --brand-foreground: oklch(0.985 0 0);
+}
+```
+
+Use it in components:
+
+```tsx
+<div className="bg-[var(--brand)] text-[var(--brand-foreground)]">
+  Branded Element
+</div>
+```
+
+## Best Practices
+
+<Callout type="tip">
+  Always use CSS variables instead of hardcoded colors to ensure proper theme support.
+</Callout>
+
+<Card title="Styling Guidelines" icon="Palette">
+  - Use Tailwind utility classes for consistency
+  - Leverage CSS variables for theme-aware components
+  - Test components in both light and dark modes
+  - Use semantic color names (e.g., `primary`, `destructive`) not color values
+  - Apply `transition` classes for smooth state changes
+</Card>
+
+## Next Steps
+
+- Learn about [custom components](/customization/custom-components)
+- Customize the [commands menu](/customization/commands-menu)
+- Configure the [marks menu](/customization/marks-menu)

@@ -1,0 +1,233 @@
+---
+title: Code Snippets
+description: Syntax-highlighted code blocks with multiple language support
+---
+
+Code snippets provide syntax-highlighted code blocks with language selection, theme customization, and copy functionality.
+
+## Usage
+
+Insert a code snippet using the `/` menu:
+
+```
+/code
+```
+
+Or type the input rule:
+
+```
+```
+```
+
+(Type three backticks)
+
+## Supported Languages
+
+Code snippets support the following languages:
+
+- JavaScript (with JSX)
+- TypeScript (with TSX)
+- HTML
+- CSS
+- Python
+- Rust
+- SQL
+
+## Themes
+
+Choose from multiple syntax highlighting themes:
+
+- **Tokyo Night** (default) - Dark theme with purple accents
+- **GitHub Dark** - GitHub's dark theme
+- **GitHub Light** - GitHub's light theme
+- **VS Code Dark** - VS Code's dark theme
+- **VS Code Light** - VS Code's light theme
+
+## Features
+
+### Language Selection
+
+Click the language dropdown to change syntax highlighting:
+
+```javascript
+const greeting = "Hello, World!";
+console.log(greeting);
+```
+
+### Theme Selection
+
+Click the theme dropdown to change color scheme.
+
+### Copy Button
+
+Click the copy button to copy code to clipboard. The button shows "Copied!" feedback.
+
+### Border Toggle
+
+Toggle the border on/off using the border button in the toolbar.
+
+### Auto-focus
+
+When creating a new code snippet, the editor automatically focuses for immediate typing.
+
+## Keyboard Navigation
+
+### Exit to ProseMirror
+
+- **Ctrl+Enter**: Exit to paragraph below the code snippet
+- **Arrow Down** (at end of last line): Exit to paragraph below
+- **Arrow Up** (at start of first line): Exit to paragraph above
+
+### Delete Empty Snippet
+
+- **Backspace** (on empty snippet): Delete the code snippet and return to document
+
+## Attributes
+
+| Attribute | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `language` | string | `"javascript"` | Programming language for syntax highlighting |
+| `title` | string | `""` | Optional title for the code snippet |
+| `theme` | string | `"tokyoNight"` | Syntax highlighting theme |
+| `showBorder` | boolean | `true` | Whether to show border (auto-disabled in tabs) |
+
+## Examples
+
+### JavaScript Example
+
+```javascript
+function fibonacci(n) {
+  if (n <= 1) return n;
+  return fibonacci(n - 1) + fibonacci(n - 2);
+}
+
+console.log(fibonacci(10)); // 55
+```
+
+### TypeScript Example
+
+```typescript
+interface User {
+  id: number;
+  name: string;
+  email: string;
+}
+
+function getUser(id: number): User | null {
+  // Implementation
+  return null;
+}
+```
+
+### Python Example
+
+```python
+def quicksort(arr):
+    if len(arr) <= 1:
+        return arr
+    pivot = arr[len(arr) // 2]
+    left = [x for x in arr if x < pivot]
+    middle = [x for x in arr if x == pivot]
+    right = [x for x in arr if x > pivot]
+    return quicksort(left) + middle + quicksort(right)
+
+print(quicksort([3, 6, 8, 10, 1, 2, 1]))
+```
+
+## Implementation Details
+
+### CodeMirror Integration
+
+**Code reference:** `components/code-snippet.tsx`
+
+Code snippets use CodeMirror 6 for the code editing experience:
+
+```typescript
+// code-snippet.tsx:489-517
+<CodeMirror
+  theme={themeExtensions[theme]}
+  value={value}
+  editable={editable}
+  extensions={[
+    languageExtensions[language],
+    arrowDownExitExtension,
+    arrowUpExitExtension,
+    ctrlEnterExitExtension,
+    backspaceDeleteExtension,
+    customStyling,
+  ]}
+  onChange={onChange}
+/>
+```
+
+### Language Extensions
+
+```typescript
+// code-snippet.tsx:67-75
+const languageExtensions: Record<string, ReturnType<typeof javascript>> = {
+  javascript: javascript({ jsx: true }),
+  typescript: javascript({ typescript: true, jsx: true }),
+  html: html(),
+  css: css(),
+  python: python(),
+  rust: rust(),
+  sql: sql(),
+}
+```
+
+### Auto-disable Border in Tabs
+
+Code snippets automatically disable borders when inside a tabs component:
+
+```typescript
+// code-snippet.tsx:529-541
+const $pos = state.selection.$from;
+let insideTabs = false;
+for (let i = $pos.depth; i >= 0; i--) {
+  if ($pos.node(i).type.name === "tabs") {
+    insideTabs = true;
+    break;
+  }
+}
+
+const codeNode = codeNodeType.create({
+  language: "javascript",
+  showBorder: !insideTabs,
+});
+```
+
+### Custom Styling
+
+```typescript
+// code-snippet.tsx:87-127
+const customStyling = EditorView.theme({
+  "&": {
+    borderRadius: "0.5rem",
+    overflow: "hidden",
+    backgroundColor: "transparent !important",
+  },
+  ".cm-scroller": {
+    padding: "0.5rem",
+  },
+  ".cm-focused": {
+    outline: "none",
+  },
+});
+```
+
+## Toolbar Options
+
+Hover over a code snippet to see the toolbar with:
+
+1. **Language selector** - Dropdown to change programming language
+2. **Theme selector** - Dropdown to change color theme
+3. **Border toggle** - Button to show/hide border
+4. **Copy button** - Copy code to clipboard
+
+## Best Practices
+
+1. **Choose the right language** for accurate syntax highlighting
+2. **Use descriptive titles** when documenting multiple code examples
+3. **Keep code snippets focused** on a single concept
+4. **Disable borders in tabs** for cleaner appearance (automatic)
+5. **Use light themes** for printed documentation

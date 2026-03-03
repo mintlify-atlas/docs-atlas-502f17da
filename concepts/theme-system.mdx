@@ -1,0 +1,379 @@
+---
+title: Theme Detection and Management
+description: Automatic light/dark mode with system preference detection
+---
+
+WebEditor includes a built-in theme system that automatically detects and applies your browser's preferred color scheme, with support for manual overrides.
+
+## Quick Start
+
+The WebEditor component automatically handles theming:
+
+```tsx
+import { WebEditor } from "@devscribe-team/webeditor";
+import "@devscribe-team/webeditor/styles";
+
+function App() {
+  return <WebEditor />;
+}
+```
+
+The theme is automatically:
+- Detected from your browser's `prefers-color-scheme` setting
+- Applied to the document root as `dark` or `light` class
+- Persisted to `localStorage`
+- Updated when system preferences change
+
+## The useTheme Hook
+
+WebEditor exposes a `useTheme` hook for manual theme control:
+
+```tsx
+import { useTheme } from "@devscribe-team/webeditor";
+
+function ThemeControls() {
+  const { theme, resolvedTheme, setTheme, toggleTheme } = useTheme();
+  
+  return (
+    <div>
+      <p>Current theme: {theme}</p>
+      <p>Resolved to: {resolvedTheme}</p>
+      
+      <button onClick={() => setTheme('light')}>Light</button>
+      <button onClick={() => setTheme('dark')}>Dark</button>
+      <button onClick={() => setTheme('auto')}>Auto</button>
+      <button onClick={toggleTheme}>Toggle</button>
+    </div>
+  );
+}
+```
+
+### Return Values
+
+<ParamField path="theme" type="'light' | 'dark' | 'auto'">
+  The current theme setting chosen by the user
+</ParamField>
+
+<ParamField path="resolvedTheme" type="'light' | 'dark'">
+  The actual theme being displayed. When `theme` is `'auto'`, this reflects the system preference.
+</ParamField>
+
+<ParamField path="setTheme" type="(theme: Theme) => void">
+  Function to change the theme. Persists to localStorage.
+</ParamField>
+
+<ParamField path="toggleTheme" type="() => void">
+  Cycles through themes: auto → light → dark → auto
+</ParamField>
+
+## How It Works
+
+The theme system is implemented in `use-theme.ts`. Let's break down each part:
+
+### Initial Theme Detection
+
+On first load, the hook checks localStorage, then falls back to `'auto'`:
+
+```typescript
+const [theme, setThemeState] = useState<Theme>(() => {
+  // Check if we're in a browser environment
+  if (typeof window === 'undefined') {
+    return 'auto';
+  }
+  
+  // First check localStorage for user preference
+  const savedTheme = localStorage.getItem('webeditor-theme') as Theme | null;
+  if (savedTheme && (savedTheme === 'light' || savedTheme === 'dark' || savedTheme === 'auto')) {
+    return savedTheme;
+  }
+  
+  // Default to auto mode
+  return 'auto';
+});
+```
+
+### Resolving the Theme
+
+The `resolvedTheme` converts `'auto'` to an actual theme:
+
+```typescript
+const [resolvedTheme, setResolvedTheme] = useState<'light' | 'dark'>(() => {
+  if (typeof window === 'undefined') {
+    return 'light';
+  }
+  
+  if (theme === 'auto') {
+    return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches 
+      ? 'dark' 
+      : 'light';
+  }
+  
+  return theme === 'dark' ? 'dark' : 'light';
+});
+```
+
+### Listening to System Changes
+
+The hook listens to the browser's color scheme preference:
+
+```typescript
+useEffect(() => {
+  if (typeof window === 'undefined') return;
+  
+  const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+  
+  const handleChange = (e: MediaQueryListEvent) => {
+    if (theme === 'auto') {
+      setResolvedTheme(e.matches ? 'dark' : 'light');
+    }
+  };
+  
+  // Set initial resolved theme
+  if (theme === 'auto') {
+    setResolvedTheme(mediaQuery.matches ? 'dark' : 'light');
+  } else {
+    setResolvedTheme(theme === 'dark' ? 'dark' : 'light');
+  }
+  
+  // Use the newer addEventListener API if available
+  if (mediaQuery.addEventListener) {
+    mediaQuery.addEventListener('change', handleChange);
+  } else {
+    // Legacy API for older browsers
+    mediaQuery.addListener(handleChange);
+  }
+  
+  return () => {
+    if (mediaQuery.removeEventListener) {
+      mediaQuery.removeEventListener('change', handleChange);
+    } else {
+      mediaQuery.removeListener(handleChange);
+    }
+  };
+}, [theme]);
+```
+
+<Info>
+The hook includes fallback support for older browsers using the legacy `addListener`/`removeListener` API.
+</Info>
+
+### Applying to DOM
+
+The resolved theme is applied as a class on the document root:
+
+```typescript
+useEffect(() => {
+  if (typeof document !== 'undefined') {
+    const root = document.documentElement;
+    
+    // Remove existing theme classes
+    root.classList.remove('dark', 'light');
+    
+    // Add the resolved theme class
+    root.classList.add(resolvedTheme);
+  }
+}, [resolvedTheme]);
+```
+
+This allows CSS to use theme-specific styles:
+
+```css
+.light {
+  --background: white;
+  --foreground: black;
+}
+
+.dark {
+  --background: black;
+  --foreground: white;
+}
+```
+
+## Usage in WebEditor
+
+The WebEditor component calls `useTheme()` internally:
+
+```tsx
+export function WebEditor(props: { /* ... */ }) {
+  // Initialize theme detection and management - automatically detects browser's preferred theme
+  // and applies dark/light mode classes to the document root
+  const { theme, resolvedTheme } = useTheme();
+  
+  // ... rest of component
+}
+```
+
+The returned values aren't used directly in rendering, but the side effects (localStorage persistence and DOM class application) happen automatically.
+
+## Building a Theme Switcher
+
+Here's a complete example of a theme switcher:
+
+```tsx
+import { WebEditor, useTheme } from "@devscribe-team/webeditor";
+import "@devscribe-team/webeditor/styles";
+import { Sun, Moon, Monitor } from "lucide-react";
+
+function ThemeSwitcher() {
+  const { theme, resolvedTheme, setTheme } = useTheme();
+  
+  const themes = [
+    { value: 'light' as const, icon: Sun, label: 'Light' },
+    { value: 'dark' as const, icon: Moon, label: 'Dark' },
+    { value: 'auto' as const, icon: Monitor, label: 'Auto' },
+  ];
+  
+  return (
+    <div className="flex gap-2">
+      {themes.map(({ value, icon: Icon, label }) => (
+        <button
+          key={value}
+          onClick={() => setTheme(value)}
+          className={`px-3 py-2 rounded ${
+            theme === value ? 'bg-primary text-primary-foreground' : 'bg-secondary'
+          }`}
+          title={label}
+        >
+          <Icon className="w-4 h-4" />
+        </button>
+      ))}
+      
+      <span className="ml-2 text-sm text-muted-foreground">
+        {theme === 'auto' ? `Auto (${resolvedTheme})` : theme}
+      </span>
+    </div>
+  );
+}
+
+function App() {
+  return (
+    <div>
+      <header className="p-4 border-b">
+        <ThemeSwitcher />
+      </header>
+      
+      <main className="p-4">
+        <WebEditor />
+      </main>
+    </div>
+  );
+}
+```
+
+## Toggle Pattern
+
+The `toggleTheme()` function cycles through modes:
+
+```typescript
+const toggleTheme = () => {
+  if (theme === 'auto') {
+    setTheme('light');
+  } else if (theme === 'light') {
+    setTheme('dark');
+  } else {
+    setTheme('auto');
+  }
+};
+```
+
+This creates a cycle: **auto** → **light** → **dark** → **auto**
+
+Useful for a single toggle button:
+
+```tsx
+function QuickToggle() {
+  const { toggleTheme, theme } = useTheme();
+  
+  return (
+    <button onClick={toggleTheme}>
+      Current: {theme}
+    </button>
+  );
+}
+```
+
+## Server-Side Rendering
+
+The hook is SSR-safe and returns defaults when running on the server:
+
+```typescript
+if (typeof window === 'undefined') {
+  return 'auto';  // or 'light' for resolvedTheme
+}
+```
+
+<Warning>
+When using SSR frameworks like Next.js, be aware that the initial render may show the default theme before hydration applies the correct theme. This can cause a flash of incorrect theme.
+</Warning>
+
+To prevent theme flash in Next.js:
+
+```tsx
+// app/layout.tsx
+import Script from 'next/script';
+
+export default function RootLayout({ children }) {
+  return (
+    <html suppressHydrationWarning>
+      <head>
+        <Script id="theme-script" strategy="beforeInteractive">
+          {`
+            (function() {
+              const theme = localStorage.getItem('webeditor-theme') || 'auto';
+              const resolved = theme === 'auto'
+                ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+                : theme;
+              document.documentElement.classList.add(resolved);
+            })();
+          `}
+        </Script>
+      </head>
+      <body>{children}</body>
+    </html>
+  );
+}
+```
+
+## Customizing Styles
+
+WebEditor's theme system works with CSS variables. You can customize the color palette:
+
+```css
+:root {
+  /* Light mode */
+  --background: 0 0% 100%;
+  --foreground: 222.2 84% 4.9%;
+  --card: 0 0% 100%;
+  --card-foreground: 222.2 84% 4.9%;
+  /* ... more variables */
+}
+
+.dark {
+  /* Dark mode */
+  --background: 222.2 84% 4.9%;
+  --foreground: 210 40% 98%;
+  --card: 222.2 84% 4.9%;
+  --card-foreground: 210 40% 98%;
+  /* ... more variables */
+}
+```
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Editor Instance" href="/concepts/editor-instance">
+    Learn about the WebEditor component
+  </Card>
+  
+  <Card title="Styling Guide" href="/customization/styling">
+    Customize editor appearance
+  </Card>
+  
+  <Card title="Components" href="/components/overview">
+    Explore available components
+  </Card>
+  
+  <Card title="Overview" href="/concepts/overview">
+    Back to core concepts
+  </Card>
+</CardGroup>

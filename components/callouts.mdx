@@ -1,0 +1,206 @@
+---
+title: Callouts
+description: Highlight important information with styled callout boxes
+---
+
+Callouts draw attention to important information with color-coded styling and icons.
+
+## Usage
+
+Insert a callout using the `/` menu:
+
+```
+/callout
+```
+
+Or use the input rule:
+
+```
+<callout type="info" />
+```
+
+## Callout Types
+
+Callouts support five different types, each with distinct styling:
+
+### Info (Default)
+
+<Callout type="info">
+  This is an informational callout with blue styling.
+</Callout>
+
+- **Icon:** Info circle
+- **Color:** Blue
+- **Use case:** General information, tips, or notes
+
+### Warning
+
+<Callout type="warning">
+  This is a warning callout with yellow styling.
+</Callout>
+
+- **Icon:** Triangle alert
+- **Color:** Yellow
+- **Use case:** Warnings about potential issues
+
+### Caution
+
+<Callout type="caution">
+  This is a caution callout with red styling.
+</Callout>
+
+- **Icon:** Octagon alert  
+- **Color:** Red
+- **Use case:** Critical warnings or dangerous operations
+
+### Important
+
+<Callout type="important">
+  This is an important callout with violet styling.
+</Callout>
+
+- **Icon:** Message square warning
+- **Color:** Violet
+- **Use case:** Important information users must know
+
+### Tip
+
+<Callout type="tip">
+  This is a tip callout with green styling.
+</Callout>
+
+- **Icon:** Lightbulb
+- **Color:** Green
+- **Use case:** Helpful tips and best practices
+
+## Attributes
+
+| Attribute | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `type` | string | `"info"` | The callout type: `info`, `warning`, `caution`, `important`, or `tip` |
+
+## Editing Callouts
+
+In edit mode:
+
+1. **Change type:** Click the icon to open the type selector modal
+2. **Edit content:** Click inside the callout to edit the content
+3. **Add formatting:** Use text marks and nested components inside callouts
+
+## Examples
+
+### Basic Callout
+
+```
+<callout type="info" />
+```
+
+Then add your content inside.
+
+### Warning with Code
+
+<Callout type="warning">
+  Do not use `eval()` as it can execute arbitrary code and poses security risks.
+</Callout>
+
+### Multi-paragraph Callout
+
+<Callout type="tip">
+  You can include multiple paragraphs in a callout.
+  
+  Just press Enter to create new paragraphs and add as much content as needed.
+</Callout>
+
+## Implementation Details
+
+**Code reference:** `components/callout.tsx`
+
+### Node Spec
+
+```typescript
+// callout.tsx:10-54
+export const calloutNodeSpec: NodeSpec = {
+  group: "block",
+  content: "block+",
+  attrs: {
+    type: { default: "info" },
+  },
+  selectable: true,
+  parseDOM: [
+    {
+      tag: "callout",
+      getAttrs: (dom) => ({
+        type: dom.getAttribute("type") || "info",
+      }),
+    },
+    // Also supports legacy tags
+    { tag: "info", getAttrs: () => ({ type: "info" }) },
+    { tag: "warning", getAttrs: () => ({ type: "warning" }) },
+    // ...
+  ],
+}
+```
+
+### Type Configuration
+
+```typescript
+// callout.tsx:64-102
+const typeInformation = {
+  info: {
+    icon: Info,
+    headerText: "Note",
+    iconColor: "text-blue-600",
+    backgroundColor: "bg-blue-500/10",
+    borderColor: "border-blue-500/20",
+  },
+  warning: {
+    icon: TriangleAlert,
+    headerText: "Warning",
+    iconColor: "text-yellow-600",
+    backgroundColor: "bg-yellow-500/10",
+    borderColor: "border-yellow-500/20",
+  },
+  // ... other types
+}
+```
+
+### Insertion Function
+
+```typescript
+// callout.tsx:183-204
+export function insertCallout(state: EditorState): Transaction {
+  const { from, to } = state.selection;
+  
+  const attrs = {
+    type: "info",
+  };
+  
+  const callout = state.schema.nodes.callout.create(
+    attrs,
+    state.schema.nodes.paragraph.create()
+  );
+  
+  let tr = state.tr;
+  if (from !== to) {
+    tr = tr.delete(from, to);
+  }
+  tr = tr.replaceSelectionWith(callout);
+  
+  // Position cursor inside the callout content
+  const insertPos = tr.selection.from;
+  const innerPos = insertPos + 1;
+  tr = tr.setSelection(Selection.near(tr.doc.resolve(innerPos)));
+  
+  return tr;
+}
+```
+
+## Styling
+
+Callouts use Tailwind CSS classes with opacity-based backgrounds for a subtle appearance:
+
+- Border: 20% opacity
+- Background: 10% opacity  
+- Icons: Full color (600 shade)
+
+This creates a consistent, non-intrusive design that works well in both light and dark modes.

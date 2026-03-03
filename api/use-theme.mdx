@@ -1,0 +1,218 @@
+---
+title: useTheme
+description: Hook for managing theme state in WebEditor
+---
+
+## useTheme
+
+React hook that provides theme management functionality including dark mode, light mode, and automatic system preference detection.
+
+### Import
+
+```tsx
+import { useTheme } from '@devscribe-team/webeditor';
+```
+
+### Type Signature
+
+```tsx
+function useTheme(): {
+  theme: Theme;
+  resolvedTheme: 'light' | 'dark';
+  setTheme: (theme: Theme) => void;
+  toggleTheme: () => void;
+}
+```
+
+### Return Value
+
+<ResponseField name="theme" type="Theme">
+  The current theme setting. Can be one of:
+  - `'light'`: Force light mode
+  - `'dark'`: Force dark mode  
+  - `'auto'`: Follow system preference
+  
+  This value represents the user's explicit theme choice, which may differ from the actual applied theme when set to `'auto'`.
+</ResponseField>
+
+<ResponseField name="resolvedTheme" type="'light' | 'dark'">
+  The actual theme currently applied to the UI. This is always either `'light'` or `'dark'`, never `'auto'`.
+  
+  When `theme` is set to `'auto'`, this value reflects the current system preference.
+</ResponseField>
+
+<ResponseField name="setTheme" type="(theme: Theme) => void">
+  Function to change the theme setting.
+  
+  **Parameters:**
+  - `theme`: The new theme to apply (`'light'`, `'dark'`, or `'auto'`)
+  
+  **Side Effects:**
+  - Updates the theme state
+  - Saves the preference to `localStorage` under the key `'webeditor-theme'`
+  - Triggers a re-render
+  - Updates the document root classes
+</ResponseField>
+
+<ResponseField name="toggleTheme" type="() => void">
+  Cycles through theme options in the order: `auto` → `light` → `dark` → `auto`.
+  
+  **Behavior:**
+  - If current theme is `'auto'`, changes to `'light'`
+  - If current theme is `'light'`, changes to `'dark'`  
+  - If current theme is `'dark'`, changes to `'auto'`
+  
+  **Side Effects:**
+  - Same as calling `setTheme()` with the next theme in the cycle
+</ResponseField>
+
+### Usage
+
+#### Basic Theme Toggle
+
+```tsx
+import { useTheme } from '@devscribe-team/webeditor';
+
+function ThemeToggle() {
+  const { resolvedTheme, toggleTheme } = useTheme();
+
+  return (
+    <button onClick={toggleTheme}>
+      {resolvedTheme === 'dark' ? '🌙' : '☀️'}
+    </button>
+  );
+}
+```
+
+#### Theme Selector
+
+```tsx
+import { useTheme, Theme } from '@devscribe-team/webeditor';
+
+function ThemeSelector() {
+  const { theme, setTheme } = useTheme();
+
+  return (
+    <select value={theme} onChange={(e) => setTheme(e.target.value as Theme)}>
+      <option value="light">Light</option>
+      <option value="dark">Dark</option>
+      <option value="auto">Auto (System)</option>
+    </select>
+  );
+}
+```
+
+#### Display Current Theme
+
+```tsx
+import { useTheme } from '@devscribe-team/webeditor';
+
+function ThemeDisplay() {
+  const { theme, resolvedTheme } = useTheme();
+
+  return (
+    <div>
+      <p>Setting: {theme}</p>
+      <p>Active: {resolvedTheme}</p>
+      {theme === 'auto' && (
+        <p>Following system preference</p>
+      )}
+    </div>
+  );
+}
+```
+
+#### Conditional Rendering Based on Theme
+
+```tsx
+import { useTheme } from '@devscribe-team/webeditor';
+
+function ThemedComponent() {
+  const { resolvedTheme } = useTheme();
+
+  return (
+    <div>
+      {resolvedTheme === 'dark' ? (
+        <img src="/logo-dark.png" alt="Logo" />
+      ) : (
+        <img src="/logo-light.png" alt="Logo" />
+      )}
+    </div>
+  );
+}
+```
+
+### Implementation Details
+
+#### Initialization
+
+On first mount, the hook:
+
+1. Checks for a saved preference in `localStorage` (key: `'webeditor-theme'`)
+2. If found and valid, uses the saved preference
+3. If not found, defaults to `'auto'`
+4. Determines the initial `resolvedTheme` based on the theme setting and system preference
+
+#### System Preference Detection
+
+The hook uses `window.matchMedia('(prefers-color-scheme: dark)')` to:
+- Detect the initial system preference
+- Listen for changes to the system preference
+- Automatically update `resolvedTheme` when the system preference changes (only when `theme` is `'auto'`)
+
+#### DOM Updates
+
+The hook automatically manages classes on `document.documentElement`:
+- Removes both `.dark` and `.light` classes
+- Adds the appropriate class based on `resolvedTheme`
+- Updates whenever `resolvedTheme` changes
+
+#### Browser Compatibility
+
+The hook includes fallbacks for older browsers:
+- Uses `addEventListener` for modern browsers
+- Falls back to `addListener` for older browsers (with TypeScript ignores)
+- Gracefully handles SSR environments where `window` and `localStorage` are unavailable
+
+### SSR Behavior
+
+When running in a server-side environment:
+
+- `theme` defaults to `'auto'`
+- `resolvedTheme` defaults to `'light'`
+- `localStorage` operations are skipped
+- `matchMedia` listeners are not attached
+- No errors are thrown
+
+The hook hydrates correctly on the client and will immediately update to the correct theme based on saved preferences and system settings.
+
+### Storage
+
+Theme preferences are persisted to `localStorage` with the key `'webeditor-theme'`. The stored value is one of:
+- `'light'`
+- `'dark'`
+- `'auto'`
+
+You can manually inspect or modify this value:
+
+```tsx
+// Read current saved preference
+const saved = localStorage.getItem('webeditor-theme');
+
+// Clear saved preference (will reset to 'auto')
+localStorage.removeItem('webeditor-theme');
+```
+
+### Performance
+
+The hook is optimized for performance:
+- Uses `useState` initialization functions to avoid repeated `localStorage` reads
+- Only updates when theme actually changes
+- Properly cleans up event listeners on unmount
+- Minimal re-renders
+
+## See Also
+
+- [Theme Type](/api/types#theme) - Type definition for theme values
+- [Theme Provider](/api/theme-provider) - Information about theme management in WebEditor
+- [WebEditor](/api/webeditor) - Main editor component that uses the theme system

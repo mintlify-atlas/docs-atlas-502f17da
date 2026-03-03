@@ -1,0 +1,347 @@
+---
+title: Markdown Conversion
+description: Converting between Markdown and editor state in WebEditor
+---
+
+WebEditor seamlessly converts between Markdown, HTML, and its internal ProseMirror document format. This allows you to import existing Markdown content and export editor content in various formats.
+
+## Importing Markdown
+
+WebEditor automatically converts Markdown to its internal format when you provide it through the `value` prop:
+
+```tsx
+import { WebEditor } from "@devscribe-team/webeditor";
+import { useState } from "react";
+
+function App() {
+  const markdownContent = `# Welcome to WebEditor
+
+This is a **bold** statement with _italic_ text.
+
+## Features
+
+- Rich text editing
+- Markdown support
+- Custom components
+
+> Blockquotes work too!
+
+\`\`\`typescript
+const greeting = "Hello, World!";
+console.log(greeting);
+\`\`\`
+`;
+
+  const [content, setContent] = useState(markdownContent);
+
+  return (
+    <WebEditor 
+      value={content}
+      onChange={setContent}
+    />
+  );
+}
+```
+
+## Conversion Pipeline
+
+When Markdown is provided to the editor, it goes through a multi-step conversion process:
+
+### Step 1: Markdown to HTML
+
+The `preprocessMarkdownToHTML` function converts Markdown to HTML using the `marked` library:
+
+```typescript
+function preprocessMarkdownToHTML(markdown: string): string {
+  markdown = markdown.trim();
+  
+  // Remove gray matter (front matter)
+  markdown = markdown.replace(/^---[\s\S]*?---\n?/m, "");
+  
+  return marked.parse(markdown, { renderer }) as string;
+}
+```
+
+(Source: preprocessMarkdown.ts:29-36)
+
+<Note>
+The preprocessor automatically strips gray matter/front matter (YAML metadata) from Markdown files before conversion.
+</Note>
+
+### Step 2: HTML to ProseMirror
+
+The HTML is then converted to a ProseMirror document fragment:
+
+```typescript
+function htmlToProseMirror(html: string) {
+  const tempDiv = document.createElement("div");
+  tempDiv.innerHTML = html;
+  
+  const parser = DOMParser.fromSchema(schema);
+  const fragment = parser.parseSlice(tempDiv).content;
+  
+  return fragment;
+}
+```
+
+(Source: index.tsx:53-62)
+
+### Step 3: Fragment to Editor State
+
+Finally, the fragment is wrapped in the editor's top-level node:
+
+```typescript
+const fragment = mdxLikeToProseMirror(props.value);
+const topNode = schema.topNodeType.create(null, fragment);
+
+const newState = EditorState.create({
+  schema,
+  doc: topNode,
+  plugins,
+});
+```
+
+(Source: index.tsx:325-332)
+
+## Code Block Conversion
+
+Code blocks receive special treatment to support language and title metadata:
+
+```markdown
+\`\`\`typescript#example.ts
+function hello() {
+  console.log("Hello!");
+}
+\`\`\`
+```
+
+This converts to:
+
+```html
+<pre><code language="typescript" title="example.ts">...</code></pre>
+```
+
+The custom renderer (preprocessMarkdown.ts:16-27):
+- Supports `language#title` syntax
+- Escapes HTML in code content
+- Preserves language metadata
+
+## Exporting HTML
+
+The editor exports content as HTML through the `onChange` callback:
+
+```typescript
+function proseMirrorToHTML(doc: Node) {
+  const serializer = DOMSerializer.fromSchema(schema);
+  const domNode = serializer.serializeFragment(doc.content);
+  
+  const container = document.createElement("div");
+  container.appendChild(domNode);
+  
+  return container.innerHTML;
+}
+```
+
+(Source: index.tsx:43-51)
+
+This HTML can then be:
+- Saved to a database
+- Rendered on a website
+- Converted back to Markdown (using external tools)
+- Displayed in read-only mode
+
+## Paste Handling
+
+WebEditor intelligently handles pasted content:
+
+### HTML Paste
+
+When pasting rich content with HTML formatting:
+
+```typescript
+const html = event.clipboardData.getData("text/html");
+if (html) {
+  const fragment = htmlToProseMirror(html);
+  const topNode = view.state.schema.topNodeType.create(null, fragment);
+  view.dispatch(view.state.tr.replaceSelectionWith(topNode));
+  return true;
+}
+```
+
+(Source: index.tsx:211-219)
+
+### Plain Text Paste
+
+When pasting plain text or Markdown:
+
+```typescript
+const text = event.clipboardData.getData("text/plain");
+if (text) {
+  const fragment = mdxLikeToProseMirror(text);
+  const topNode = view.state.schema.topNodeType.create(null, fragment);
+  view.dispatch(view.state.tr.replaceSelectionWith(topNode));
+  return true;
+}
+```
+
+(Source: index.tsx:223-230)
+
+<Tip>
+WebEditor prefers HTML when both HTML and plain text are available in the clipboard, preserving rich formatting when possible.
+</Tip>
+
+## Supported Markdown Syntax
+
+WebEditor supports standard Markdown through the marked library:
+
+### Inline Elements
+
+<CardGroup cols={2}>
+  <Card title="Bold">
+    `**bold**` or `__bold__`
+  </Card>
+  <Card title="Italic">
+    `*italic*` or `_italic_`
+  </Card>
+  <Card title="Strikethrough">
+    `~~strikethrough~~`
+  </Card>
+  <Card title="Code">
+    `` `inline code` ``
+  </Card>
+</CardGroup>
+
+### Block Elements
+
+<CardGroup cols={2}>
+  <Card title="Headings">
+    `# H1` through `#### H4`
+    
+    (Up to 4 levels supported)
+  </Card>
+  <Card title="Lists">
+    Unordered: `*`, `-`, or `+`
+    
+    Ordered: `1.`, `2.`, etc.
+  </Card>
+  <Card title="Blockquotes">
+    `> Quote text`
+  </Card>
+  <Card title="Code Blocks">
+    ` ```language `
+    
+    or
+    
+    ` ```language#title `
+  </Card>
+</CardGroup>
+
+## Live Markdown Input
+
+As you type Markdown syntax, WebEditor automatically converts it to formatted content using input rules:
+
+```typescript
+export function inputPlugin() {
+  return inputRules({
+    rules: [
+      addHeadersRule,           // # heading
+      addUnorderedListRule,     // * list
+      addOrderedListRule,       // 1. list
+      addQuoteRule,             // > quote
+      addStrongRule,            // **bold**
+      addEmRule,                // _italic_
+      addStrikethroughRule,     // ~~strike~~
+      // ... component rules
+    ],
+  });
+}
+```
+
+(Source: markdown/input.tsx:115-142)
+
+<Warning>
+Input rules trigger as you type. For example, typing `**hello**` followed by a space will immediately convert the text to bold and remove the asterisks.
+</Warning>
+
+## Converting Back to Markdown
+
+WebEditor exports HTML, not Markdown. To convert back to Markdown:
+
+1. **Use a conversion library**: Use tools like `turndown` to convert HTML back to Markdown
+2. **Store original Markdown**: Keep the original Markdown alongside the HTML
+3. **Use a hybrid approach**: Store both formats and use Markdown as the source of truth
+
+### Example with Turndown
+
+```tsx
+import TurndownService from "turndown";
+
+const turndownService = new TurndownService();
+
+function App() {
+  const [content, setContent] = useState("");
+
+  const handleSave = (html: string) => {
+    // Convert HTML back to Markdown
+    const markdown = turndownService.turndown(html);
+    
+    // Save markdown to your backend
+    saveToBackend(markdown);
+  };
+
+  return (
+    <WebEditor 
+      value={content}
+      onChange={handleSave}
+    />
+  );
+}
+```
+
+## Front Matter Handling
+
+When loading Markdown with YAML front matter, it's automatically stripped:
+
+```markdown
+---
+title: My Document
+author: John Doe
+---
+
+# Content starts here
+```
+
+The front matter is removed during conversion (preprocessMarkdown.ts:33), but you can preserve it separately:
+
+```tsx
+import matter from "gray-matter";
+
+function parseMarkdownWithMeta(markdown: string) {
+  const { data, content } = matter(markdown);
+  
+  return {
+    metadata: data,
+    content: content,
+  };
+}
+
+function App() {
+  const markdown = `---
+title: Hello
+---
+# Content`;
+  
+  const { metadata, content } = parseMarkdownWithMeta(markdown);
+  
+  return (
+    <div>
+      <h1>{metadata.title}</h1>
+      <WebEditor value={content} />
+    </div>
+  );
+}
+```
+
+<Note>
+The conversion system is designed to be lossless for standard Markdown, but custom components and complex HTML structures may not round-trip perfectly back to Markdown.
+</Note>

@@ -1,0 +1,304 @@
+---
+title: Creating Custom Components
+description: Learn how to build custom block and inline components for WebEditor
+---
+
+## Overview
+
+WebEditor supports custom components built on top of ProseMirror. Components can be either block-level (like cards and callouts) or inline (like icons and badges). All components are defined with a NodeSpec and rendered using React NodeViews.
+
+## Component Architecture
+
+Each custom component consists of three main parts:
+
+1. **NodeSpec**: Defines the component's schema, attributes, and parsing rules
+2. **NodeView**: React component that renders the component
+3. **Input Rules**: Optional shortcuts for inserting the component
+
+## Creating a Block Component
+
+Here's how to create a custom card component:
+
+### 1. Define the NodeSpec
+
+```typescript
+import { NodeSpec } from "prosemirror-model";
+
+export const cardNodeSpec: NodeSpec = {
+  group: "block",
+  content: "block*",
+  attrs: {
+    title: { default: "Card Title" },
+    icon: { default: null },
+    showIcon: { default: true },
+    horizontal: { default: false },
+    href: { default: null },
+  },
+  selectable: true,
+
+  parseDOM: [
+    {
+      tag: "card",
+      getAttrs: (dom) => ({
+        title: dom.getAttribute("title") || "Card Title",
+        icon: dom.getAttribute("icon") || null,
+        showIcon: dom.getAttribute("show-icon") !== "false",
+        horizontal: dom.getAttribute("horizontal") === "true",
+        href: dom.getAttribute("href") || null,
+      }),
+    },
+  ],
+
+  toDOM: (node) => [
+    "card",
+    {
+      title: node.attrs.title,
+      icon: node.attrs.icon,
+      "show-icon": node.attrs.showIcon.toString(),
+      horizontal: node.attrs.horizontal.toString(),
+      href: node.attrs.href,
+    },
+    0,
+  ],
+};
+```
+
+### 2. Create the React NodeView
+
+```typescript
+import { NodeViewComponentProps } from "@handlewithcare/react-prosemirror";
+import React from "react";
+import { useEditorEditable } from "../editorEditableContext";
+
+export const CardNodeView = React.forwardRef<HTMLDivElement, NodeViewComponentProps>(
+  function Card({ nodeProps, ...props }, ref) {
+    const title = nodeProps.node.attrs.title || "Card Title";
+    const icon = nodeProps.node.attrs.icon;
+    const horizontal = nodeProps.node.attrs.horizontal ?? false;
+    const editable = useEditorEditable();
+
+    return (
+      <div className="border border-border bg-card shadow-sm rounded-lg">
+        <div className="p-4">
+          <h6 className="mb-2 text-lg font-semibold">{title}</h6>
+          <div {...props} ref={ref} />
+        </div>
+      </div>
+    );
+  }
+);
+```
+
+### 3. Add Input Rules
+
+```typescript
+import { InputRule } from "prosemirror-inputrules";
+import { Selection } from "prosemirror-state";
+
+export const addCardRule = new InputRule(
+  /^<card(?:\s+([^>]+))?(?:\s*\/>|\s*>)/,
+  (state, match, start, end) => {
+    const { tr, schema } = state;
+
+    const attrs = {
+      title: "Card Title",
+      icon: null,
+      showIcon: true,
+      horizontal: false,
+      href: null,
+    };
+
+    // Parse attributes if they exist
+    if (match[1]) {
+      const titleMatch = match[1].match(/title="([^"]*)"/);  
+      if (titleMatch) attrs.title = titleMatch[1];
+    }
+
+    const card = schema.nodes.card.create(
+      attrs,
+      schema.nodes.paragraph.create()
+    );
+
+    tr.replaceRangeWith(start, end, card);
+    const newPos = start + 1;
+    tr.setSelection(Selection.near(tr.doc.resolve(newPos)));
+
+    return tr;
+  }
+);
+```
+
+### 4. Register in Schema
+
+```typescript
+import { schema as mdSchema } from "prosemirror-markdown";
+import { Schema } from "prosemirror-model";
+import { cardNodeSpec } from "./components/card";
+
+const nodes = mdSchema.spec.nodes
+  .remove("code_block")
+  .append({ card: cardNodeSpec });
+
+export const schema = new Schema({
+  nodes,
+  marks: mdSchema.spec.marks,
+});
+```
+
+## Creating an Inline Component
+
+Inline components like icons follow a similar pattern but use `group: "inline"`:
+
+```typescript
+export const iconNodeSpec: NodeSpec = {
+  group: "inline",
+  inline: true,
+  atom: true,
+  selectable: false,
+  attrs: {
+    name: { default: "FileText" },
+    size: { default: 20 },
+  },
+  parseDOM: [
+    {
+      tag: "icon",
+      getAttrs: (dom) => ({
+        name: dom.getAttribute("name") || "FileText",
+        size: parseInt(dom.getAttribute("size") || "20"),
+      }),
+    },
+  ],
+  toDOM: (node) => [
+    "icon",
+    {
+      name: node.attrs.name,
+      size: node.attrs.size.toString(),
+      class: "inline-flex items-center justify-center",
+    },
+  ],
+};
+```
+
+## Component Features
+
+### Editable Attributes
+
+Use `useEditorEventCallback` to update component attributes:
+
+```typescript
+import { useEditorEventCallback } from "@handlewithcare/react-prosemirror";
+
+const updateTitle = useEditorEventCallback(
+  (view, newTitle: string) => {
+    const { getPos, node } = nodeProps;
+    const pos = getPos();
+    const tr = view.state.tr;
+    tr.setNodeMarkup(pos, undefined, {
+      ...node.attrs,
+      title: newTitle,
+    });
+    view.dispatch(tr);
+  },
+  [nodeProps]
+);
+```
+
+### Dynamic Icons
+
+WebEditor includes a dynamic icon loading system for Lucide icons:
+
+```typescript
+import { resolveIcon, resolveInlineIcon } from "./card";
+
+// For block components
+const iconElement = resolveIcon(icon, {
+  size: "w-5 h-5",
+  showIcon: true,
+});
+
+// For inline components
+const inlineIconElement = resolveInlineIcon(icon, {
+  size: 20,
+  showIcon: true,
+});
+```
+
+### Modal Dialogs
+
+Use the built-in modal components for editing:
+
+```typescript
+import { TitleDescriptionEditModal } from "./modals/TitleDescriptionEditModal";
+import { IconEditModal } from "./modals/IconEditModal";
+import { CalloutTypeEditModal } from "./modals/CalloutTypeEditModal";
+
+const [modalOpen, setModalOpen] = useState(false);
+
+<IconEditModal
+  open={modalOpen}
+  initialIcon={icon}
+  onCloseAction={() => setModalOpen(false)}
+  onSubmitAction={updateIcon}
+  modalTitle="Edit Icon"
+  iconLabel="Icon"
+  iconPlaceholder="e.g. FileText, Book, Star"
+/>
+```
+
+## Insert Functions
+
+Create insert functions for programmatic component insertion:
+
+```typescript
+import { EditorState, Transaction } from "prosemirror-state";
+import { Selection } from "prosemirror-state";
+
+export function insertCard(state: EditorState): Transaction {
+  const { from, to } = state.selection;
+
+  const attrs = {
+    title: "Card Title",
+    icon: null,
+    showIcon: true,
+    horizontal: false,
+    href: null,
+  };
+
+  const card = state.schema.nodes.card.create(
+    attrs,
+    state.schema.nodes.paragraph.create()
+  );
+
+  let tr = state.tr;
+  if (from !== to) {
+    tr = tr.delete(from, to);
+  }
+  tr = tr.replaceSelectionWith(card);
+
+  const insertPos = tr.selection.from;
+  const innerPos = insertPos + 1;
+  tr = tr.setSelection(Selection.near(tr.doc.resolve(innerPos)));
+
+  return tr;
+}
+```
+
+## Best Practices
+
+<Card title="Component Guidelines" icon="Lightbulb">
+  - Use `contentEditable={false}` for non-editable UI elements
+  - Always check if `getPos` is a function before using it
+  - Use `useEditorEditable()` to respect the editor's editable state
+  - Position the cursor correctly after inserting components
+  - Handle keyboard events (Enter, Escape) for accessibility
+</Card>
+
+<Callout type="warning">
+  Components must be registered in the schema before they can be used in the editor.
+</Callout>
+
+## Next Steps
+
+- Learn about [styling components](/customization/styling)
+- Customize the [commands menu](/customization/commands-menu)
+- Add components to the [marks menu](/customization/marks-menu)

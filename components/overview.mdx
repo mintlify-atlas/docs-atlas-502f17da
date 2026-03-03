@@ -1,0 +1,125 @@
+---
+title: Components Overview
+description: A complete overview of all available components in WebEditor
+---
+
+WebEditor provides a rich set of components for building interactive documentation and content. All components can be inserted using the `/` slash menu or by typing their input rules.
+
+## Content Components
+
+### Text Formatting
+
+Inline text marks for styling content:
+
+- **Bold** - Make text bold
+- **Italic** - Make text italic
+- **Strikethrough** - Strike through text
+- **Code** - Format as inline code
+- **Tooltip** - Add tooltips to text
+
+[Learn more about text formatting →](/components/text-formatting)
+
+### Block Components
+
+#### Information Display
+
+<CardGroup cols={2}>
+  <Card title="Callouts" icon="alert-circle" href="/components/callouts">
+    Highlight important information with styled callout boxes
+  </Card>
+  <Card title="Cards" icon="credit-card" href="/components/cards">
+    Create horizontal or vertical cards with icons and links
+  </Card>
+  <Card title="Badges" icon="hash" href="/components/badges">
+    Add inline badges with custom text and styling
+  </Card>
+  <Card title="Icons" icon="sparkles" href="/components/icons">
+    Insert icons from the Lucide icon library
+  </Card>
+</CardGroup>
+
+#### Code & Diagrams
+
+<CardGroup cols={2}>
+  <Card title="Code Snippets" icon="code" href="/components/code-snippets">
+    Syntax-highlighted code blocks with multiple language support
+  </Card>
+  <Card title="Mermaid Diagrams" icon="network" href="/components/mermaid">
+    Create flowcharts, sequence diagrams, and more
+  </Card>
+</CardGroup>
+
+#### Interactive Elements
+
+<CardGroup cols={2}>
+  <Card title="Accordions" icon="list-collapse" href="/components/accordions">
+    Collapsible sections with titles and descriptions
+  </Card>
+  <Card title="Tabs" icon="list" href="/components/tabs">
+    Organize content in tabbed interfaces
+  </Card>
+</CardGroup>
+
+#### Layout Components
+
+<CardGroup cols={2}>
+  <Card title="Columns" icon="columns" href="/components/columns">
+    Create responsive multi-column layouts (1-4 columns)
+  </Card>
+  <Card title="Frames" icon="frame" href="/components/frames">
+    Add bordered containers with padding and captions
+  </Card>
+  <Card title="Steps" icon="arrow-up-from-dot" href="/components/steps">
+    Create numbered step-by-step instructions
+  </Card>
+</CardGroup>
+
+#### Documentation
+
+<CardGroup cols={2}>
+  <Card title="Parameter Fields" icon="file-text" href="/components/fields">
+    Document API parameters with type information
+  </Card>
+</CardGroup>
+
+## Inserting Components
+
+### Using the Slash Menu
+
+Type `/` anywhere in the editor to open the component menu. Start typing to filter components:
+
+```
+/card → Insert a card component
+/code → Insert a code snippet
+/callout → Insert a callout
+```
+
+### Using Input Rules
+
+Many components support direct input rules. For example:
+
+- Type `# ` for Heading 1
+- Type `## ` for Heading 2
+- Type `- ` for bullet list
+- Type `> ` for quote
+- Type ` ``` ` for code snippet
+
+### Using Component Tags
+
+You can also insert components using their tag syntax:
+
+```
+<card title="My Card" icon="FileText" />
+<callout type="info" />
+<accordion title="Click to expand" />
+```
+
+## Component Attributes
+
+Most components support various attributes that can be configured:
+
+- Click on component elements in edit mode to modify attributes
+- Hover over components to see editing options
+- Use attribute modals for complex configurations
+
+See individual component pages for detailed attribute documentation.

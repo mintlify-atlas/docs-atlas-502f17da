@@ -1,0 +1,180 @@
+---
+title: Text Formatting
+description: Inline text marks for bold, italic, strikethrough, code, and tooltips
+---
+
+WebEditor supports rich text formatting through its marks system. Marks are applied to selected text and can be toggled on/off.
+
+## Available Marks
+
+### Bold
+
+Make text **bold** to emphasize important content.
+
+**Usage:**
+1. Select text in the editor
+2. Press `Cmd/Ctrl + B` or click the Bold button in the toolbar
+3. Or select text and choose "Bold" from the marks menu
+
+**Code reference:** `marks-system.tsx:34-49`
+
+```typescript
+{
+  id: "bold",
+  name: "Bold",
+  description: "Make text bold",
+  icon: Bold,
+  execute: (state, dispatch) => {
+    const mark = state.schema.marks.strong.create();
+    // Applies the bold mark to selected text
+  }
+}
+```
+
+### Italic
+
+Make text *italic* for emphasis or to denote terms.
+
+**Usage:**
+1. Select text in the editor
+2. Press `Cmd/Ctrl + I` or click the Italic button
+3. Or select text and choose "Italic" from the marks menu
+
+**Code reference:** `marks-system.tsx:51-66`
+
+### Strikethrough
+
+Apply ~~strikethrough~~ to show deleted or deprecated content.
+
+**Usage:**
+1. Select text in the editor
+2. Choose "Strikethrough" from the marks menu
+
+**Code reference:** `marks-system.tsx:68-83`
+
+### Inline Code
+
+Format text as `inline code` for technical terms, variable names, or short code snippets.
+
+**Usage:**
+1. Select text in the editor
+2. Press `` Cmd/Ctrl + ` `` or choose "Inline Code" from the marks menu
+
+**Code reference:** `marks-system.tsx:85-100`
+
+```typescript
+{
+  id: "code",
+  name: "Inline Code",
+  description: "Format as inline code",
+  icon: Code,
+  execute: (state, dispatch) => {
+    const mark = state.schema.marks.code.create();
+    // Applies monospace formatting
+  }
+}
+```
+
+### Tooltips
+
+Add tooltips to text to provide additional context on hover.
+
+**Usage:**
+1. Select text in the editor
+2. Choose "Tooltip" from the marks menu
+3. Enter the tooltip text in the modal dialog
+4. The text will display the tooltip on hover
+
+**Attributes:**
+- `tooltip` (string) - The tooltip text to display
+
+**Code reference:** `marks-system.tsx:103-110`
+
+```typescript
+{
+  id: "tooltip",
+  name: "Tooltip",
+  description: "Add a tooltip to the selected text",
+  icon: Info,
+  type: "tooltip",
+  requiresAttributes: true,
+}
+```
+
+**Executing tooltip marks:**
+
+```typescript
+// From marks-system.tsx:165-178
+function executeTooltipMark(
+  state: EditorState,
+  dispatch: (tr: Transaction) => void,
+  tooltipText: string,
+): boolean {
+  const { from, to } = state.selection;
+  
+  if (from === to) return false; // No selection
+  
+  const mark = state.schema.marks.tooltip_mark.create({ tooltip: tooltipText });
+  const tr = state.tr.addMark(from, to, mark).removeStoredMark(mark);
+  dispatch(tr);
+  return true;
+}
+```
+
+## Combining Marks
+
+Multiple marks can be applied to the same text. For example, you can have **bold italic** text or **`bold code`** text.
+
+## Removing Marks
+
+To remove a mark:
+1. Select the marked text
+2. Toggle the same mark command (e.g., press `Cmd/Ctrl + B` on bold text)
+
+## Mark System Implementation
+
+The marks system is defined in `editor/utils/marks-system.tsx` and provides:
+
+- Type-safe mark definitions
+- Simple toggle marks (bold, italic, strikethrough, code)
+- Attribute-based marks (tooltip)
+- Keyboard shortcuts
+- Toolbar integration
+- Filtering and search capabilities
+
+### Helper Functions
+
+```typescript
+// Check if a mark requires attributes
+isTooltipMarkCommand(command: MarkCommand): boolean
+
+// Check if a mark is a simple toggle
+isSimpleMarkCommand(command: MarkCommand): boolean
+
+// Get all simple mark commands
+getSimpleMarkCommands(): SimpleMarkCommand[]
+
+// Get all tooltip mark commands  
+getTooltipMarkCommands(): TooltipMarkCommand[]
+
+// Filter marks by search term
+filterMarkCommands(searchTerm: string): MarkCommandItem[]
+
+// Check if any text is selected
+hasTextSelection(state: EditorState): boolean
+```
+
+## Usage in Your Application
+
+```typescript
+import { marksMenuSetup, executeTooltipMark } from './marks-system';
+
+// Render marks menu
+marksMenuSetup.forEach(item => {
+  if ('separator' in item) {
+    // Render separator
+  } else {
+    // Render mark command button
+  }
+});
+```

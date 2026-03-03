@@ -1,0 +1,258 @@
+---
+title: Tabs
+description: Organize content in tabbed interfaces
+---
+
+Tabs organize related content into separate views that users can switch between.
+
+## Usage
+
+Insert tabs using the `/` menu:
+
+```
+/tabs
+```
+
+Or use the input rule:
+
+```
+<tabs />
+```
+
+## Features
+
+- **Multiple tabs** - Add, remove, and reorder tabs
+- **Content persistence** - Tab content is saved when switching tabs
+- **Editable tab names** - Click to rename tabs
+- **Dynamic management** - Add new tabs or delete existing ones
+- **Code snippet integration** - Automatically detects and imports code snippets
+
+## Managing Tabs
+
+### Adding Tabs
+
+Click the `+` button in the tab bar to add a new tab.
+
+### Renaming Tabs
+
+In edit mode:
+1. Click on a tab name
+2. Enter the new name in the modal
+3. Press Enter or click Save
+
+### Deleting Tabs
+
+Click the `×` button on a tab to delete it (requires at least 2 tabs).
+
+### Switching Tabs
+
+Click on any tab to switch to it. Content is automatically saved and restored.
+
+## Attributes
+
+| Attribute | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `tabNames` | string[] | `["Tab 1"]` | Array of tab names |
+| `activeTab` | number | `0` | Index of currently active tab |
+| `tabContents` | object | `{}` | Stored content for each tab |
+
+## Examples
+
+### Basic Tabs
+
+```
+<tabs />
+```
+
+Starts with a single tab named "Tab 1".
+
+### Pre-configured Tabs
+
+You can import code snippets into tabs:
+
+```html
+<tabs>
+  <pre><code language="javascript" title="JavaScript">
+    console.log("Hello");
+  </code></pre>
+  <pre><code language="python" title="Python">
+    print("Hello")
+  </code></pre>
+</tabs>
+```
+
+This automatically creates tabs named "JavaScript" and "Python" with the code content.
+
+### Code Snippet Tabs
+
+Code snippets inside tabs automatically have their borders disabled for a cleaner appearance.
+
+## Content Persistence
+
+When switching tabs:
+
+1. Current tab content is saved to `tabContents[activeTab]`
+2. New tab content is loaded from `tabContents[newTab]`
+3. Empty tabs get a default paragraph
+
+**Code reference:** `components/tabs.tsx:177-208`
+
+```typescript
+const switchTab = useEditorEventCallback((view, newIdx: number) => {
+  if (activeTab === newIdx) return;
+  
+  // Save current content
+  const currentContent = node.content.toJSON();
+  const updatedTabContents = {
+    ...tabContents,
+    [activeTab]: currentContent,
+  };
+  
+  // Load new tab content
+  const newTabContent = updatedTabContents[newIdx];
+  
+  const tr = view.state.tr;
+  tr.setNodeMarkup(nodeProps.getPos(), null, {
+    ...node.attrs,
+    activeTab: newIdx,
+    tabContents: updatedTabContents,
+  });
+  
+  if (newTabContent) {
+    const newFragment = Fragment.fromJSON(node.type.schema, newTabContent);
+    tr.replaceWith(/* replace with new content */);
+  } else {
+    // Create empty paragraph for new tab
+    tr.replaceWith(/* empty paragraph */);
+  }
+  
+  view.dispatch(tr);
+});
+```
+
+## Tab Deletion with Reindexing
+
+When deleting a tab, indices are adjusted:
+
+**Code reference:** `components/tabs.tsx:254-306`
+
+```typescript
+const deleteTab = useEditorEventCallback((view, tabIndex: number) => {
+  // Don't delete if it's the last tab
+  if (tabNames.length <= 1) return;
+  
+  const updatedTabNames = tabNames.filter((_, index) => index !== tabIndex);
+  const updatedTabContents = { ...tabContents };
+  delete updatedTabContents[tabIndex];
+  
+  // Adjust active tab if needed
+  let newActiveTab = activeTab;
+  if (tabIndex === activeTab) {
+    newActiveTab = tabIndex > 0 ? tabIndex - 1 : 0;
+  } else if (tabIndex < activeTab) {
+    newActiveTab = activeTab - 1;
+  }
+  
+  // Reindex tab contents
+  const reindexedTabContents: Record<number, unknown> = {};
+  Object.entries(updatedTabContents).forEach(([key, value]) => {
+    const oldIndex = parseInt(key);
+    if (oldIndex < tabIndex) {
+      reindexedTabContents[oldIndex] = value;
+    } else if (oldIndex > tabIndex) {
+      reindexedTabContents[oldIndex - 1] = value;
+    }
+  });
+  
+  // Update node and load new active tab content
+});
+```
+
+## Importing Code Snippets
+
+Tabs can automatically import code from `<pre><code>` elements:
+
+**Code reference:** `components/tabs.tsx:36-86`
+
+```typescript
+parseDOM: [
+  {
+    tag: "tabs",
+    getAttrs: (dom) => {
+      const elementsToProcess = Array.from(dom.querySelectorAll("pre > code"));
+      
+      if (elementsToProcess.length > 0) {
+        const newTabNames: string[] = [];
+        const newTabContents: Record<number, any> = {};
+        
+        for (let i = 0; i < elementsToProcess.length; i++) {
+          const cs = elementsToProcess[i];
+          const language = cs.getAttribute("language") || "javascript";
+          const title = cs.getAttribute("title");
+          const content = cs.textContent || "";
+          
+          const tabName = title || language.charAt(0).toUpperCase() + language.slice(1);
+          newTabNames.push(tabName);
+          
+          // Create code snippet node for this tab
+          const tabContent = [{
+            type: "code_snippet",
+            attrs: { language, title: title || "" },
+            content: content ? [{ type: "text", text: content }] : [],
+          }];
+          
+          newTabContents[i] = tabContent;
+        }
+        
+        return { tabNames: newTabNames, tabContents: newTabContents };
+      }
+    },
+  },
+]
+```
+
+## Implementation Details
+
+### Node Spec
+
+```typescript
+// tabs.tsx:10-161
+export const tabsNodeSpec: NodeSpec = {
+  group: "block",
+  content: "block+",
+  attrs: {
+    tabNames: { default: ["Tab 1"] },
+    activeTab: { default: 0 },
+    tabContents: { default: {} },
+  },
+  defining: true,
+  selectable: true,
+}
+```
+
+### Styling
+
+```typescript
+// tabs.tsx:336-349
+<div
+  className={`
+    ${isFirst ? "rounded-tl-lg" : ""}
+    ${isActive ? "bg-secondary/60 text-secondary-foreground" : "text-muted-foreground"}
+    hover:bg-secondary/60 hover:text-secondary-foreground
+    px-4 py-2 border-b-2 border-transparent hover:border-border
+    transition-colors duration-100 cursor-pointer
+    min-w-0 flex-1 flex items-center justify-between
+  `}
+  onClick={() => switchTab(i)}
+>
+  {/* Tab name and delete button */}
+</div>
+```
+
+## Use Cases
+
+1. **Code examples** - Show same functionality in different languages
+2. **API documentation** - Separate request/response/examples
+3. **Platform guides** - Different instructions for OS/platform
+4. **Version comparisons** - Show differences between versions
+5. **Content organization** - Group related but distinct information

@@ -1,0 +1,279 @@
+---
+title: Columns
+description: Create responsive multi-column layouts
+---
+
+Columns create responsive grid layouts with 1-4 columns that automatically stack on mobile devices.
+
+## Usage
+
+Insert columns using the `/` menu:
+
+```
+/columns
+```
+
+Or use the component tag:
+
+```
+<columns cols="2" gap="md" />
+```
+
+## Features
+
+- **1-4 columns** - Support for up to 4 columns
+- **Responsive** - Automatically stacks on smaller screens
+- **Adjustable gap** - Choose from small, medium, or large gaps
+- **Visual editor** - Click +/- buttons to add/remove columns
+- **Dotted guides** - Visual column boundaries in edit mode
+
+## Attributes
+
+| Attribute | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `cols` | number | `2` | Number of columns (1-4) |
+| `gap` | string | `"md"` | Gap size: `"sm"`, `"md"`, or `"lg"` |
+
+## Responsive Behavior
+
+- **1 column**: Always 1 column
+- **2 columns**: 1 column on mobile, 2 on tablet+
+- **3 columns**: 1 on mobile, 2 on tablet, 3 on desktop
+- **4 columns**: 1 on mobile, 2 on tablet, 3 on desktop, 4 on wide screens
+
+## Gap Sizes
+
+- **Small (`sm`)**: 1rem (16px)
+- **Medium (`md`)**: 1.5rem (24px)
+- **Large (`lg`)**: 2rem (32px)
+
+## Managing Columns
+
+In edit mode, hover over the columns component to see controls:
+
+1. **Decrease columns** - Click the `-` button
+2. **Increase columns** - Click the `+` button
+3. **Current count** - Displayed in the center
+
+## Examples
+
+### Two Columns
+
+```
+<columns cols="2" gap="md" />
+```
+
+Add content to each column.
+
+### Three Columns with Small Gap
+
+```
+<columns cols="3" gap="sm" />
+```
+
+### Four Columns with Large Gap
+
+```
+<columns cols="4" gap="lg" />
+```
+
+### Single Column (Full Width)
+
+```
+<columns cols="1" />
+```
+
+## Content in Columns
+
+Each column can contain:
+
+- Paragraphs
+- Headings
+- Lists
+- Code snippets
+- Cards
+- Images
+- Any other block content
+
+## Implementation Details
+
+### Node Spec
+
+```typescript
+// columns.tsx:12-37
+export const columnsNodeSpec: NodeSpec = {
+  group: "block",
+  content: "column+",
+  attrs: {
+    cols: { default: 2 },
+    gap: { default: "md" },
+  },
+  selectable: true,
+}
+
+// Individual column spec
+export const columnNodeSpec: NodeSpec = {
+  content: "block+",
+  defining: true,
+  isolating: true,
+  parseDOM: [{ tag: "column" }],
+  toDOM: () => ["column", 0],
+}
+```
+
+### Responsive Grid Classes
+
+```typescript
+// columns.tsx:76-80
+const colClasses = {
+  1: "grid-cols-1",
+  2: "grid-cols-1 md:grid-cols-2",
+  3: "grid-cols-1 md:grid-cols-2 lg:grid-cols-3",
+  4: "grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4",
+}
+```
+
+### Gap Classes
+
+```typescript
+// columns.tsx:70-74
+const gapClasses = {
+  sm: "gap-4",
+  md: "gap-6",
+  lg: "gap-8",
+}
+```
+
+### Update Columns Function
+
+**Code reference:** `components/columns.tsx:82-120`
+
+```typescript
+const updateColumns = useEditorEventCallback((view, newCols: number) => {
+  const { getPos, node } = nodeProps;
+  const pos = getPos();
+  let tr = view.state.tr;
+  
+  const existingColumns = [];
+  for (let i = 0; i < node.childCount; i++) {
+    existingColumns.push(node.child(i));
+  }
+  
+  const newColumns = [];
+  for (let i = 0; i < newCols; i++) {
+    if (i < existingColumns.length) {
+      // Use existing column
+      newColumns.push(existingColumns[i]);
+    } else {
+      // Create new empty column
+      newColumns.push(
+        view.state.schema.nodes.column.create(
+          {},
+          view.state.schema.nodes.paragraph.create()
+        )
+      );
+    }
+  }
+  
+  // Create new columns node
+  const newColumnsNode = view.state.schema.nodes.columns.create(
+    { ...node.attrs, cols: newCols },
+    newColumns
+  );
+  
+  tr = tr.replaceWith(pos, pos + node.nodeSize, newColumnsNode);
+  view.dispatch(tr);
+});
+```
+
+### Visual Column Guides
+
+```typescript
+// columns.tsx:174-189
+{editable && (
+  <div className="absolute inset-0 pointer-events-none">
+    {Array.from({ length: cols }, (_, i) => (
+      <div
+        key={i}
+        className="absolute border border-dashed border-border/30 rounded"
+        style={{
+          left: `${(100 / cols) * i}%`,
+          width: `${100 / cols}%`,
+          top: 0,
+          height: "100%",
+        }}
+      />
+    ))}
+  </div>
+)}
+```
+
+### Column Controls
+
+```typescript
+// columns.tsx:147-172
+{editable && (
+  <div className="absolute top-2 right-2 flex items-center gap-2 bg-black/10 
+    rounded-lg px-2 py-1 shadow-lg">
+    <button
+      onClick={handleDecreaseCols}
+      disabled={cols <= 1}
+      className="flex items-center bg-secondary/60 rounded px-2 py-0.5"
+    >
+      <Minus className="w-3 h-3" />
+    </button>
+    <span className="bg-secondary/60 text-xs px-2 py-0.5 rounded">
+      {cols}
+    </span>
+    <button
+      onClick={handleIncreaseCols}
+      disabled={cols >= 4}
+      className="flex items-center bg-secondary/60 rounded px-2 py-0.5"
+    >
+      <Plus className="w-3 h-3" />
+    </button>
+  </div>
+)}
+```
+
+## Input Rule
+
+```typescript
+// columns.tsx:197-224
+export const addColumnsRule = new InputRule(
+  /^<columns(?:\s+([^>]+))?(?:\s*\/>|\s*>)/,
+  (state, match, start, end) => {
+    let cols = 2;
+    let gap = "md";
+    
+    if (match[1]) {
+      const colsMatch = match[1].match(/cols="?(\d)"?/);
+      if (colsMatch) cols = parseInt(colsMatch[1], 10);
+      
+      const gapMatch = match[1].match(/gap="(sm|md|lg)"/); 
+      if (gapMatch) gap = gapMatch[1];
+    }
+    
+    // Create column nodes
+    const columnNodes = Array.from({ length: cols }, () =>
+      schema.nodes.column.create({}, schema.nodes.paragraph.create())
+    );
+    
+    const columns = schema.nodes.columns.create({ cols, gap }, columnNodes);
+    const emptyParagraph = schema.nodes.paragraph.create();
+    
+    const fragment = Fragment.from([columns, emptyParagraph]);
+    tr.replaceWith(start, end, fragment);
+    
+    return tr;
+  }
+);
+```
+
+## Use Cases
+
+1. **Feature comparisons** - Compare features side-by-side
+2. **Image galleries** - Display images in a grid
+3. **Team members** - Show team profiles in columns
+4. **Pricing tiers** - Display pricing options
+5. **Content organization** - Organize related content

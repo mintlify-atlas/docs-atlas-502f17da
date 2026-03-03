@@ -1,0 +1,277 @@
+---
+title: Frames
+description: Add bordered containers with padding and captions
+---
+
+Frames create bordered containers around content with customizable padding and optional captions.
+
+## Usage
+
+Insert a frame using the `/` menu:
+
+```
+/frame
+```
+
+Or use the component tag:
+
+```
+<frame padding="md" caption="Figure 1: Example" />
+```
+
+## Features
+
+- **Bordered container** - Clear visual boundary
+- **Adjustable padding** - Choose from 4 sizes
+- **Optional caption** - Add descriptive text below
+- **Click-to-edit** - Click border or caption to edit
+- **Hover effects** - Visual feedback in edit mode
+
+## Attributes
+
+| Attribute | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `caption` | string | `""` | Optional caption text displayed below frame |
+| `padding` | string | `"md"` | Padding size: `"sm"`, `"md"`, `"lg"`, or `"xl"` |
+
+## Padding Sizes
+
+- **Small (`sm`)**: 0.5rem (8px)
+- **Medium (`md`)**: 1rem (16px)
+- **Large (`lg`)**: 1.5rem (24px)
+- **Extra Large (`xl`)**: 2rem (32px)
+
+## Editing Frames
+
+In edit mode:
+
+1. **Edit settings:** Click any border edge to open the editor
+2. **Edit caption:** Click the caption text
+3. **Edit content:** Click inside the frame
+
+## Examples
+
+### Basic Frame
+
+```
+<frame padding="md" />
+```
+
+Add your content inside.
+
+### Frame with Caption
+
+```
+<frame caption="Figure 1: System Architecture" />
+```
+
+### Large Padding Frame
+
+```
+<frame padding="lg" caption="Example Output" />
+```
+
+### Frame with Code
+
+```
+<frame padding="sm" caption="Configuration Example" />
+```
+
+Then add a code snippet inside.
+
+### Frame with Image
+
+```
+<frame caption="Screenshot: Dashboard View" />
+```
+
+Add an image inside the frame.
+
+## Implementation Details
+
+### Node Spec
+
+```typescript
+// frame.tsx:14-39
+export const frameNodeSpec: NodeSpec = {
+  group: "block",
+  content: "block+",
+  attrs: {
+    caption: { default: "" },
+    padding: { default: "md" },
+  },
+  selectable: true,
+  parseDOM: [
+    {
+      tag: "frame",
+      getAttrs: (dom) => ({
+        caption: dom.getAttribute("caption") || "",
+        padding: dom.getAttribute("padding") || "md",
+      }),
+    },
+  ],
+}
+```
+
+### Padding Classes
+
+```typescript
+// frame.tsx:192-205
+function getPaddingClass(padding: string) {
+  switch (padding) {
+    case "sm":
+      return "p-2";
+    case "md":
+      return "p-4";
+    case "lg":
+      return "p-6";
+    case "xl":
+      return "p-8";
+    default:
+      return "p-4";
+  }
+}
+```
+
+### Clickable Border Areas
+
+**Code reference:** `components/frame.tsx:255-295`
+
+```typescript
+{editable && (
+  <>
+    {/* Top border */}
+    <div
+      className="absolute top-0 left-0 right-0 h-2 cursor-pointer z-10"
+      onClick={(e) => {
+        e.stopPropagation();
+        setModalOpen(true);
+      }}
+    />
+    {/* Bottom border */}
+    <div
+      className="absolute bottom-0 left-0 right-0 h-2 cursor-pointer z-10"
+      onClick={(e) => {
+        e.stopPropagation();
+        setModalOpen(true);
+      }}
+    />
+    {/* Left border */}
+    <div
+      className="absolute top-0 bottom-0 left-0 w-2 cursor-pointer z-10"
+      onClick={(e) => {
+        e.stopPropagation();
+        setModalOpen(true);
+      }}
+    />
+    {/* Right border */}
+    <div
+      className="absolute top-0 bottom-0 right-0 w-2 cursor-pointer z-10"
+      onClick={(e) => {
+        e.stopPropagation();
+        setModalOpen(true);
+      }}
+    />
+  </>
+)}
+```
+
+### Caption Display
+
+```typescript
+// frame.tsx:302-327
+{caption && (
+  <div className="mt-2 text-center">
+    <span
+      contentEditable={false}
+      className={`text-sm text-muted-foreground italic 
+        ${editable ? "cursor-pointer hover:text-foreground transition-colors" : ""}`}
+      onClick={(e) => {
+        if (!editable) return;
+        e.stopPropagation();
+        setModalOpen(true);
+      }}
+      tabIndex={editable ? 0 : -1}
+    >
+      {caption}
+    </span>
+  </div>
+)}
+```
+
+### Frame Editor Modal
+
+**Code reference:** `components/frame.tsx:42-189`
+
+The modal includes:
+
+```typescript
+interface FrameEditModalProps {
+  open: boolean;
+  initialCaption: string;
+  initialPadding: string;
+  onCloseAction: () => void;
+  onSubmitAction: (values: {
+    caption: string;
+    padding: string;
+  }) => void;
+  modalTitle?: string;
+}
+```
+
+Fields:
+1. **Caption** - Text input for optional caption
+2. **Padding Size** - Dropdown with sm/md/lg/xl options
+
+### Input Rule
+
+```typescript
+// frame.tsx:333-353
+export const addFrameRule = new InputRule(
+  /^<frame(?:\s+([^>]+))?(?:\s*\/>|\s*>)/,
+  (state, match, start, end) => {
+    const attrs = {
+      caption: "",
+      padding: "md",
+    };
+    
+    if (match[1]) {
+      const captionMatch = match[1].match(/caption="([^"]*)"/); 
+      if (captionMatch) attrs.caption = captionMatch[1];
+      
+      const paddingMatch = match[1].match(/padding="([^"]*)"/); 
+      if (paddingMatch) attrs.padding = paddingMatch[1];
+    }
+    
+    const frame = schema.nodes.frame.create(attrs, schema.nodes.paragraph.create());
+    tr.replaceRangeWith(start, end, frame);
+    return tr;
+  }
+);
+```
+
+## Styling
+
+Frames use:
+
+```typescript
+// frame.tsx:250-254
+<div className={`border border-border rounded-lg ${getPaddingClass(padding)} 
+  ${editable ? "hover:border-primary/50 transition-colors" : ""}`}>
+```
+
+Features:
+- Border for definition
+- Rounded corners (0.5rem)
+- Padding based on attribute
+- Hover effect in edit mode (border color changes)
+- Relative positioning for clickable areas
+
+## Use Cases
+
+1. **Images** - Frame screenshots and diagrams with captions
+2. **Examples** - Highlight example content
+3. **Callouts** - Create custom styled callouts
+4. **Code blocks** - Frame code with explanatory captions
+5. **Quotes** - Frame important quotes
+6. **Figures** - Academic-style numbered figures
